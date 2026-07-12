@@ -6,9 +6,18 @@ import { FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
 import { isOutOfStock, isLowStock } from '@/constants/inventory';
 
+function cartHasBlockingIssues(items = []) {
+  return items.some((item) => {
+    const p = item.product || {};
+    const stock = p.stock ?? 0;
+    return p.is_active === false || isOutOfStock(stock) || Number(item.quantity) > stock;
+  });
+}
+
 export default function Cart() {
   const { cart, loading, subtotal, addToCart, setQuantity, removeFromCart, getItemPrice, getItemImage } = useCart();
   const items = cart || [];
+  const checkoutBlocked = cartHasBlockingIssues(items);
 
   if (!loading && items.length === 0) {
     return (
@@ -137,7 +146,13 @@ export default function Cart() {
                 <span className="text-sm uppercase tracking-widest text-slate-400">Total</span>
                 <span className="font-display font-bold text-3xl text-brand-400">{formatCurrency(subtotal)}</span>
               </div>
-              <Link to="/checkout" className="btn-primary w-full text-center uppercase tracking-widest text-sm shadow-[0_4px_25px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_35px_rgba(212,175,55,0.4)] py-4">
+              {checkoutBlocked && (
+                <p className="text-xs text-red-400 mb-3">Resolve stock issues above before checkout.</p>
+              )}
+              <Link
+                to="/checkout"
+                className={`btn-primary w-full text-center uppercase tracking-widest text-sm shadow-[0_4px_25px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_35px_rgba(212,175,55,0.4)] py-4 ${checkoutBlocked ? 'pointer-events-none opacity-50' : ''}`}
+              >
                 Secure Checkout
               </Link>
             </div>

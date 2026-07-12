@@ -53,7 +53,8 @@ export default function OrderConfirmation() {
       </div>
 
       <div className="flex gap-4 mt-8">
-        <Link to="/orders" className="btn-secondary flex-1 text-center">View Orders</Link>
+        <Link to={`/orders/${order.id}`} className="btn-secondary flex-1 text-center">View Order Details</Link>
+        <Link to="/orders" className="btn-secondary flex-1 text-center">All Orders</Link>
         <Link to="/shop" className="btn-primary flex-1 text-center">Continue Shopping</Link>
       </div>
     </div>

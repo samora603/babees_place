@@ -24,13 +24,16 @@ export default function AdminPickupLocations() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (editing) await adminService.updatePickupLocation(editing._id, form);
-      else await adminService.addPickupLocation(form);
+      const result = editing
+        ? await adminService.updatePickupLocation(editing._id, form)
+        : await adminService.addPickupLocation(form);
+      if (result.data.error) throw result.data.error;
       toast.success(editing ? 'Boutique details updated' : 'Boutique location added');
       setModal(false);
       fetchLocations();
-    } catch { toast.error('Command failed'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error(err?.message || 'Command failed');
+    } finally { setSaving(false); }
   };
 
   return (
@@ -49,7 +52,11 @@ export default function AdminPickupLocations() {
       </div>
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 relative z-10">
-        {locations.map((loc) => (
+        {locations.length === 0 ? (
+          <div className="col-span-full card p-10 text-center text-slate-400">
+            No pickup locations yet. Add one so customers can checkout.
+          </div>
+        ) : locations.map((loc) => (
           <div key={loc._id} className="bg-[#111] p-6 rounded-2xl border border-brand-500/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col justify-between group hover:border-brand-500/30 transition-all duration-300 relative overflow-hidden">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-brand-500/5 rounded-full blur-[20px] pointer-events-none group-hover:bg-brand-500/10 transition-colors"></div>
             

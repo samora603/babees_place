@@ -1,10 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import { LOW_STOCK_THRESHOLD } from '@/constants/inventory';
 
-// Standard error returned by deferred (Phase 2) features whose backing tables
-// are intentionally absent from the approved canonical schema.
-const FEATURE_DEFERRED = { message: 'This feature is not available yet.' };
-
 async function deleteProductStorage(productId) {
     try {
         const prefix = `products/${productId}`;
@@ -143,6 +139,7 @@ export const adminService = {
             status,
             total,
             payment_status,
+            delivery_type,
             created_at,
             user_id,
             note,
@@ -172,13 +169,43 @@ export const adminService = {
 
     updateOrderStatus: async (id, body) => {
         const { status, note } = body;
-        const update = {};
-        if (status !== undefined) update.status = status;
-        if (note !== undefined) update.note = note;
-        // orders.updated_at is maintained by the set_updated_at trigger (migration 003).
 
-        const { data, error } = await supabase.from('orders').update(update).eq('id', id).select().single();
-        return { data: { data, error } };
+        if (status === 'cancelled') {
+            const { error } = await supabase.rpc('cancel_order', { p_order_id: id });
+            if (error) return { data: { data: null, error } };
+            if (note) {
+                const { data, error: noteErr } = await supabase
+                    .from('orders')
+                    .update({ note })
+                    .eq('id', id)
+                    .select()
+                    .single();
+                return { data: { data, error: noteErr } };
+            }
+            const { data } = await supabase.from('orders').select('*').eq('id', id).single();
+            return { data: { data, error: null } };
+        }
+
+        const { error } = await supabase.rpc('update_order_status', {
+            p_order_id: id,
+            p_status: status,
+            p_note: note ?? null,
+        });
+        if (error) return { data: { data: null, error } };
+        const { data, error: fetchErr } = await supabase.from('orders').select('*').eq('id', id).single();
+        return { data: { data, error: fetchErr } };
+    },
+
+    updateOrderPaymentStatus: async (id, body) => {
+        const { paymentStatus, note } = body;
+        const { error } = await supabase.rpc('update_order_payment_status', {
+            p_order_id: id,
+            p_payment_status: paymentStatus,
+            p_note: note ?? null,
+        });
+        if (error) return { data: { data: null, error } };
+        const { data, error: fetchErr } = await supabase.from('orders').select('*').eq('id', id).single();
+        return { data: { data, error: fetchErr } };
     },
 
     getOrder: async (id) => {
@@ -187,7 +214,8 @@ export const adminService = {
             .select(`
                 *,
                 order_items (*),
-                profiles (full_name, email, phone)
+                profiles (full_name, email, phone),
+                pickup_locations (id, name, building, description, operating_hours)
             `)
             .eq('id', id)
             .maybeSingle();
@@ -320,13 +348,50 @@ export const adminService = {
         return { data: { data, error } };
     },
 
-    // Pickup Locations — DEFERRED (Phase 2).
-    // The `pickup_locations` table is NOT part of the approved canonical schema
-    // (see Reconciliation_Decision_Log.md / Final_Canonical_Schema.md). These
-    // methods are guarded so the admin UI degrades gracefully instead of issuing
-    // queries against a non-existent table. Wire to a real table when designed.
-    getPickupLocations: async () => ({ data: { data: [], error: null } }),
-    addPickupLocation: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
-    updatePickupLocation: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
-    deletePickupLocation: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
+    // Pickup Locations
+    getPickupLocations: async (includeInactive = true) => {
+        let query = supabase
+            .from('pickup_locations')
+            .select('*')
+            .order('name', { ascending: true });
+        if (!includeInactive) query = query.eq('is_active', true);
+        const { data, error } = await query;
+        if (error) return { data: { data: [], error } };
+        const mapped = (data || []).map((loc) => ({
+            _id: loc.id,
+            id: loc.id,
+            name: loc.name,
+            building: loc.building,
+            description: loc.description,
+            operatingHours: loc.operating_hours,
+            isActive: loc.is_active,
+        }));
+        return { data: { data: mapped, error: null } };
+    },
+    addPickupLocation: async (body) => {
+        const payload = {
+            name: body.name?.trim(),
+            building: body.building?.trim() || '',
+            description: body.description?.trim() || null,
+            operating_hours: body.operatingHours || body.operating_hours || {},
+            is_active: body.isActive !== false,
+        };
+        const { data, error } = await supabase.from('pickup_locations').insert(payload).select().single();
+        return { data: { data, error } };
+    },
+    updatePickupLocation: async (id, body) => {
+        const payload = {};
+        if (body.name !== undefined) payload.name = body.name.trim();
+        if (body.building !== undefined) payload.building = body.building.trim();
+        if (body.description !== undefined) payload.description = body.description?.trim() || null;
+        if (body.operatingHours !== undefined) payload.operating_hours = body.operatingHours;
+        if (body.isActive !== undefined) payload.is_active = body.isActive;
+        payload.updated_at = new Date().toISOString();
+        const { data, error } = await supabase.from('pickup_locations').update(payload).eq('id', id).select().single();
+        return { data: { data, error } };
+    },
+    deletePickupLocation: async (id) => {
+        const { data, error } = await supabase.from('pickup_locations').delete().eq('id', id).select();
+        return { data: { data, error } };
+    },
 };

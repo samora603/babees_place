@@ -1,6 +1,8 @@
 export const ORDER_STATUSES = {
     pending: { label: 'Pending', color: 'text-yellow-400 bg-yellow-400/10' },
+    confirmed: { label: 'Confirmed', color: 'text-blue-400 bg-blue-400/10' },
     processing: { label: 'Processing', color: 'text-purple-400 bg-purple-400/10' },
+    ready_for_pickup: { label: 'Ready for Pickup', color: 'text-amber-400 bg-amber-400/10' },
     shipped: { label: 'Shipped', color: 'text-cyan-400   bg-cyan-400/10' },
     delivered: { label: 'Delivered', color: 'text-green-400  bg-green-400/10' },
     cancelled: { label: 'Cancelled', color: 'text-red-400    bg-red-400/10' },
