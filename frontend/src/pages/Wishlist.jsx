@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { FiHeart, FiTrash2 } from 'react-icons/fi';
 import { formatCurrency, getPrimaryImage } from '@/utils/helpers';
 import { useCart } from '@/context/CartContext';
-import toast from 'react-hot-toast';
 
 export default function Wishlist() {
   const { wishlist, toggleWishlist } = useWishlist();
@@ -33,12 +32,12 @@ export default function Wishlist() {
                   <Link to={`/shop/${product.slug || id}`}>
                     <h3 className="text-sm font-semibold line-clamp-2">{product.name}</h3>
                   </Link>
-                  <p className="font-bold text-brand-400">{formatCurrency(product.discountPrice || product.price)}</p>
+                  <p className="font-bold text-brand-400">{formatCurrency(product.discount_price || product.price)}</p>
                   <div className="flex gap-2">
                     <button onClick={() => addToCart({
                       id,
                       name: product.name || '',
-                      price: product.discountPrice ?? product.price ?? 0,
+                      price: product.discount_price ?? product.price ?? 0,
                       image_url: image,
                     })} className="flex-1 btn-primary text-xs py-1.5 px-2">Add to Cart</button>
                     <button onClick={() => toggleWishlist(id)} className="btn-ghost text-red-400 px-2" aria-label="Remove from wishlist">

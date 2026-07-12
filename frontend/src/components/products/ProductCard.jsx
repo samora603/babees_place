@@ -11,10 +11,11 @@ export default function ProductCard({ product }) {
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { isAuthenticated } = useAuth();
 
-  const image = getPrimaryImage(product.images);
-  const wishlisted = isWishlisted(product._id);
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
-  const discount = hasDiscount ? discountPercent(product.price, product.discountPrice) : 0;
+  const productId = product.id || product._id || product.product_id;
+  const image = getPrimaryImage(product.images) || product.image_url || '/placeholder.png';
+  const wishlisted = isWishlisted(productId);
+  const hasDiscount = product.discount_price && product.discount_price < product.price;
+  const discount = hasDiscount ? discountPercent(product.price, product.discount_price) : 0;
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -22,9 +23,9 @@ export default function ProductCard({ product }) {
     if (product.stock === 0) { toast.error('Out of stock'); return; }
     // Construct minimal product shape required by CartContext
     const cartItem = {
-      id: product.id || product._id || product.product_id,
+      id: productId,
       name: product.name || product.title || '',
-      price: product.discountPrice ?? product.price ?? 0,
+      price: product.discount_price ?? product.price ?? 0,
       image_url: getPrimaryImage(product.images || []),
     };
     addToCart(cartItem);
@@ -33,12 +34,12 @@ export default function ProductCard({ product }) {
   const handleWishlist = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) { toast.error('Please sign in to save items'); return; }
-    await toggleWishlist(product._id);
+    await toggleWishlist(productId);
   };
 
   return (
     <Link
-      to={`/shop/${product.slug || product._id}`}
+      to={`/shop/${product.slug || productId}`}
       className="card group flex flex-col overflow-hidden hover:border-brand-500/40 transition-all duration-300 hover:shadow-[0_4px_30px_rgba(212,175,55,0.15)] bg-[#111]"
     >
       {/* Image */}
@@ -79,7 +80,7 @@ export default function ProductCard({ product }) {
 
       {/* Info */}
       <div className="p-5 flex flex-col flex-1 gap-2 relative z-10">
-        <p className="text-[10px] uppercase tracking-widest text-brand-500 font-semibold">{product.category?.name}</p>
+        <p className="text-[10px] uppercase tracking-widest text-brand-500 font-semibold">{product.categories?.name || product.category}</p>
         <h3 className="text-sm font-display font-medium text-white line-clamp-2 leading-relaxed tracking-wide group-hover:text-brand-100 transition-colors">{product.name}</h3>
 
         {/* Rating */}
@@ -94,7 +95,7 @@ export default function ProductCard({ product }) {
           <div>
             {hasDiscount ? (
               <div className="flex flex-col gap-0.5">
-                <span className="font-display font-bold text-lg text-brand-400">{formatCurrency(product.discountPrice)}</span>
+                <span className="font-display font-bold text-lg text-brand-400">{formatCurrency(product.discount_price)}</span>
                 <span className="text-xs text-slate-500 line-through tracking-wider">{formatCurrency(product.price)}</span>
               </div>
             ) : (

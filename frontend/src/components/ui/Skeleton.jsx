@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Skeleton = ({ className = '', variant = 'rectangular', ...props }) => {
   const baseClasses = 'animate-pulse bg-white/5 border border-white/5';
   

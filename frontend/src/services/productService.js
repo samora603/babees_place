@@ -3,17 +3,31 @@ import { supabase } from '@/lib/supabaseClient';
 export const productService = {
   getProducts: async (params = {}) => {
     try {
-      let query = supabase.from('products').select('*', { count: 'exact' });
-      if (params.limit) query = query.limit(Number(params.limit));
+      // Embed the canonical category row (FK products.category_id -> categories.id).
+      let query = supabase
+        .from('products')
+        .select('*, categories (id, name, slug)', { count: 'exact' });
+      if (params.search) query = query.ilike('name', `%${params.search}%`);
+      // Filter by the canonical FK; Shop passes a category id (uuid).
+      if (params.category) query = query.eq('category_id', params.category);
+      if (params.minPrice) query = query.gte('price', Number(params.minPrice));
+      if (params.maxPrice) query = query.lte('price', Number(params.maxPrice));
+      if (params.inStock) query = query.gt('stock', 0);
+      // Sorting is limited to canonical columns (created_at, price).
+      const sortMap = {
+        '-createdAt': ['created_at', false],
+        price: ['price', true],
+        '-price': ['price', false],
+      };
+      const [sortCol, sortAsc] = sortMap[params.sort] || ['created_at', false];
+      query = query.order(sortCol, { ascending: sortAsc });
       if (params.page && params.limit) {
         const from = (Number(params.page) - 1) * Number(params.limit);
         const to = from + Number(params.limit) - 1;
         query = query.range(from, to);
+      } else if (params.limit) {
+        query = query.limit(Number(params.limit));
       }
-      if (params.search) query = query.ilike('name', `%${params.search}%`);
-      if (params.category) query = query.eq('category', params.category);
-      if (params.minPrice) query = query.gte('price', Number(params.minPrice));
-      if (params.maxPrice) query = query.lte('price', Number(params.maxPrice));
       const { data, error, count } = await query;
       if (error) {
         console.error('productService.getProducts error:', error);
@@ -31,7 +45,7 @@ export const productService = {
 
   getProductById: async (id) => {
     try {
-      const { data, error } = await supabase.from('products').select('*').eq('id', id).maybeSingle();
+      const { data, error } = await supabase.from('products').select('*, categories (id, name, slug)').eq('id', id).maybeSingle();
       if (error) {
         console.error('productService.getProductById error:', error);
         return { data: { data: null }, error: null };
@@ -45,9 +59,9 @@ export const productService = {
 
   getProduct: async (idOrSlug) => {
     try {
-      const { data, error } = await supabase.from('products').select('*').eq('id', idOrSlug).maybeSingle();
+      const { data, error } = await supabase.from('products').select('*, categories (id, name, slug)').eq('id', idOrSlug).maybeSingle();
       if (error || !data) {
-        const fallback = await supabase.from('products').select('*').ilike('slug', `%${idOrSlug}%`).maybeSingle();
+        const fallback = await supabase.from('products').select('*, categories (id, name, slug)').ilike('slug', `%${idOrSlug}%`).maybeSingle();
         return { data: { data: fallback.data ?? null }, error: null };
       }
       return { data: { data }, error: null };
@@ -57,19 +71,19 @@ export const productService = {
     }
   },
 
-    getCategories: async () => {
+  // Categories are read from the canonical `categories` table (single source of
+  // truth) rather than derived from the deprecated products.category text.
+  getCategories: async () => {
     const { data, error } = await supabase
-      .from('products')
-      .select('category');
+      .from('categories')
+      .select('id, name, slug')
+      .order('name', { ascending: true });
 
-    if (error) return { data: { data: [] }, error };
+    if (error) {
+      console.error('productService.getCategories error:', error);
+      return { data: { data: [] }, error: null };
+    }
 
-    const categories = [...new Set(data.map(p => p.category).filter(Boolean))]
-      .map((name, i) => ({
-        id: String(i + 1),
-        name
-      }));
-
-    return { data: { data: categories }, error: null };
+    return { data: { data: Array.isArray(data) ? data : [] }, error: null };
   },
 };

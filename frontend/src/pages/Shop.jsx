@@ -66,7 +66,7 @@ export default function Shop() {
                 <label className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Category</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="input text-sm py-2.5 bg-surface-card/60 border-brand-500/20 focus:border-brand-500/50 text-slate-300 appearance-none" id="shop-category">
                   <option value="">All Categories</option>
-                  {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>

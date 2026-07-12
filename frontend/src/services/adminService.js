@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabaseClient';
 
+// Standard error returned by deferred (Phase 2) features whose backing tables
+// are intentionally absent from the approved canonical schema.
+const FEATURE_DEFERRED = { message: 'This feature is not available yet.' };
+
 // Admin operations implemented against Supabase. These return objects shaped
 // similarly to the previous API (wrapped in `{ data: ... }`) where callers
 // expect that. For more advanced behavior (uploads, complex stats) the
@@ -28,7 +32,7 @@ export const adminService = {
 
         supabase
           .from("orders")
-          .select("total_amount, created_at"),
+          .select("total, created_at"),
 
         supabase
           .from("products")
@@ -39,7 +43,7 @@ export const adminService = {
       const orders = revenueResult.data || [];
 
       const totalRevenue = orders.reduce(
-        (sum, order) => sum + Number(order.total_amount || order.total_price || 0),
+        (sum, order) => sum + Number(order.total || 0),
         0
       );
 
@@ -59,7 +63,7 @@ export const adminService = {
               o.created_at.slice(0, 10) === key
           )
           .reduce(
-            (sum, o) => sum + Number(o.total_amount || o.total_price || 0),
+            (sum, o) => sum + Number(o.total || 0),
             0
           );
 
@@ -116,7 +120,7 @@ export const adminService = {
         .select(`
             id,
             status,
-            total_amount,
+            total,
             payment_status,
             created_at,
             user_id,
@@ -150,7 +154,7 @@ export const adminService = {
         const update = {};
         if (status !== undefined) update.status = status;
         if (note !== undefined) update.note = note;
-        update.updated_at = new Date().toISOString();
+        // orders.updated_at is maintained by the set_updated_at trigger (migration 003).
 
         const { data, error } = await supabase.from('orders').update(update).eq('id', id).select().single();
         return { data: { data, error } };
@@ -175,7 +179,7 @@ export const adminService = {
         const page = params.page || 1;
         const from = (page - 1) * limit;
         const to = from + limit - 1;
-        const { data, error, count } = await supabase.from('profiles').select('*', { count: 'exact' }).range(from, to);
+        const { data, count } = await supabase.from('profiles').select('*', { count: 'exact' }).range(from, to);
         return { data: { data: data || [], total: count || 0 } };
     },
 
@@ -205,10 +209,10 @@ export const adminService = {
             const uploaded = [];
             for (const file of files) {
                 const path = `products/${id}/${file.name}`;
-                const { data, error } = await supabase.storage.from('products').upload(path, file, { upsert: true });
+                const { error } = await supabase.storage.from('products').upload(path, file, { upsert: true });
                 if (error) throw error;
-                const { publicURL } = supabase.storage.from('products').getPublicUrl(path);
-                uploaded.push({ path, url: publicURL });
+                const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(path);
+                uploaded.push({ path, url: publicUrl });
             }
             return { data: { data: uploaded } };
         } catch (error) {
@@ -231,13 +235,17 @@ export const adminService = {
     },
 
     // Inventory
-    getInventory: async (params = {}) => {
-        // For simplicity, inventory is product stock
-        const { data, error } = await supabase.from('products').select('id,name,stock');
+    getInventory: async () => {
+        const { data, error } = await supabase
+            .from('products')
+            .select('id, name, stock, price, category, images');
         return { data: { data: data || [], error } };
     },
     getLowStock: async () => {
-        const { data, error } = await supabase.from('products').select('id,name,stock').lt('stock', 5);
+        const { data, error } = await supabase
+            .from('products')
+            .select('id, name, stock, price, category, images')
+            .lt('stock', 5);
         return { data: { data: data || [], error } };
     },
     updateStock: async (productId, body) => {
@@ -245,21 +253,13 @@ export const adminService = {
         return { data: { data, error } };
     },
 
-    // Pickup Locations
-    getPickupLocations: async () => {
-        const { data, error } = await supabase.from('pickup_locations').select('*');
-        return { data: { data: data || [], error } };
-    },
-    addPickupLocation: async (body) => {
-        const { data, error } = await supabase.from('pickup_locations').insert(body).select().single();
-        return { data: { data, error } };
-    },
-    updatePickupLocation: async (id, body) => {
-        const { data, error } = await supabase.from('pickup_locations').update(body).eq('id', id).select().single();
-        return { data: { data, error } };
-    },
-    deletePickupLocation: async (id) => {
-        const { data, error } = await supabase.from('pickup_locations').delete().eq('id', id).select();
-        return { data: { data, error } };
-    },
+    // Pickup Locations — DEFERRED (Phase 2).
+    // The `pickup_locations` table is NOT part of the approved canonical schema
+    // (see Reconciliation_Decision_Log.md / Final_Canonical_Schema.md). These
+    // methods are guarded so the admin UI degrades gracefully instead of issuing
+    // queries against a non-existent table. Wire to a real table when designed.
+    getPickupLocations: async () => ({ data: { data: [], error: null } }),
+    addPickupLocation: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
+    updatePickupLocation: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
+    deletePickupLocation: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
 };

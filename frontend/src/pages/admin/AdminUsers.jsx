@@ -15,7 +15,7 @@ export default function AdminUsers() {
   useEffect(() => {
     setLoading(true);
     adminService.getUsers({ page, limit: 15, ...(search && { search }) })
-      .then(({ data }) => { setUsers(data.data); setPages(data.pages); })
+      .then(({ data }) => { setUsers(data.data); setPages(Math.ceil((data.total || 0) / 15) || 1); })
       .finally(() => setLoading(false));
   }, [page, search]);
 
@@ -46,15 +46,14 @@ export default function AdminUsers() {
                   <th className="px-6 py-5">Contact Details</th>
                   <th className="px-6 py-5">Access Level</th>
                   <th className="px-6 py-5">Initiation Date</th>
-                  <th className="px-6 py-5">Operational Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-500/5 text-slate-300">
                 {users.map((u) => (
-                  <tr key={u._id} className="hover:bg-brand-500/5 transition-colors group">
+                  <tr key={u.id} className="hover:bg-brand-500/5 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-medium text-white group-hover:text-brand-400 transition-colors tracking-wide">{u.name || 'Unknown Entity'}</span>
+                        <span className="font-medium text-white group-hover:text-brand-400 transition-colors tracking-wide">{u.full_name || 'Unknown Entity'}</span>
                         <span className="text-[10px] font-mono text-slate-500 mt-1">{u.email || ''}</span>
                       </div>
                     </td>
@@ -70,18 +69,7 @@ export default function AdminUsers() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-[11px] font-mono tracking-wider text-slate-400">{formatDate(u.createdAt)}</td>
-                    <td className="px-6 py-4">
-                      {u.isActive ? (
-                        <span className="inline-flex items-center justify-center min-w-[5rem] px-2 py-1 rounded text-[10px] uppercase tracking-widest font-bold bg-[#0A0A0A] text-brand-500 border border-brand-500/20">
-                           Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center min-w-[5rem] px-2 py-1 rounded text-[10px] uppercase tracking-widest font-bold bg-orange-500/10 text-orange-400 border border-orange-500/30 shadow-inner">
-                           Suspended
-                        </span>
-                      )}
-                    </td>
+                    <td className="px-6 py-4 text-[11px] font-mono tracking-wider text-slate-400">{formatDate(u.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

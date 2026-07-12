@@ -5,7 +5,6 @@ import { FiShoppingBag, FiPackage, FiUsers, FiDollarSign, FiAlertCircle } from '
 import { GiBee } from 'react-icons/gi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Spinner from '@/components/ui/Spinner';
-import { supabase } from '@/lib/supabaseClient';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);

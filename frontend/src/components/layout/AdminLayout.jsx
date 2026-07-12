@@ -1,7 +1,7 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   FiGrid, FiPackage, FiShoppingBag, FiUsers, FiBarChart2,
-  FiMapPin, FiSettings, FiLogOut, FiAlertCircle,
+  FiMapPin, FiSettings, FiLogOut,
 } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
 import { useAuth } from '@/context/AuthContext';

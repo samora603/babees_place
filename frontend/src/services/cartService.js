@@ -12,7 +12,7 @@ export const cartService = {
   getCart: async (userId) => {
     try {
       if (!userId) return { data: { items: [] }, error: null };
-      const { data, error } = await supabase.from('cart').select('*, products(*)').eq('user_id', userId).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('cart_items').select('*, products(*)').eq('user_id', userId).order('created_at', { ascending: false });
       if (error) {
         console.error('cartService.getCart error:', error);
         return { data: { items: [] }, error };
@@ -27,13 +27,13 @@ export const cartService = {
   addToCart: async (userId, productId, quantity = 1) => {
     try {
       if (!userId || !productId) return { data: { items: [] }, error: null };
-      const { data: existing } = await supabase.from('cart').select('*').eq('user_id', userId).eq('product_id', productId).maybeSingle();
+      const { data: existing } = await supabase.from('cart_items').select('*').eq('user_id', userId).eq('product_id', productId).maybeSingle();
       if (existing) {
-        const { data, error } = await supabase.from('cart').update({ quantity: Number(existing.quantity || 0) + Number(quantity) }).eq('id', existing.id).select('*').single();
+        const { data, error } = await supabase.from('cart_items').update({ quantity: Number(existing.quantity || 0) + Number(quantity) }).eq('id', existing.id).select('*').single();
         if (error) return { data: { items: [] }, error };
         return { data: { items: normalizeRows([data]) }, error: null };
       }
-      const { data, error } = await supabase.from('cart').insert({ user_id: userId, product_id: productId, quantity: Number(quantity) }).select('*').single();
+      const { data, error } = await supabase.from('cart_items').insert({ user_id: userId, product_id: productId, quantity: Number(quantity) }).select('*').single();
       if (error) return { data: { items: [] }, error };
       return { data: { items: normalizeRows([data]) }, error: null };
     } catch (err) {
@@ -45,9 +45,9 @@ export const cartService = {
   updateQuantity: async (cartId, quantity) => {
     try {
       if (Number(quantity) <= 0) {
-        return this.removeFromCart(cartId);
+        return cartService.removeFromCart(cartId);
       }
-      const { data, error } = await supabase.from('cart').update({ quantity: Number(quantity) }).eq('id', cartId).select('*').single();
+      const { data, error } = await supabase.from('cart_items').update({ quantity: Number(quantity) }).eq('id', cartId).select('*').single();
       if (error) return { data: { items: [] }, error };
       return { data: { items: normalizeRows([data]) }, error: null };
     } catch (err) {
@@ -58,7 +58,7 @@ export const cartService = {
 
   removeFromCart: async (cartId) => {
     try {
-      const { error } = await supabase.from('cart').delete().eq('id', cartId);
+      const { error } = await supabase.from('cart_items').delete().eq('id', cartId);
       return { data: { items: [] }, error };
     } catch (err) {
       console.error('cartService.removeFromCart exception:', err);
@@ -69,7 +69,7 @@ export const cartService = {
   clearCart: async (userId) => {
     try {
       if (!userId) return { data: { items: [] }, error: null };
-      const { error } = await supabase.from('cart').delete().eq('user_id', userId);
+      const { error } = await supabase.from('cart_items').delete().eq('user_id', userId);
       return { data: { items: [] }, error };
     } catch (err) {
       console.error('cartService.clearCart exception:', err);
@@ -80,16 +80,16 @@ export const cartService = {
   // Compatibility helpers for existing UI/pages.
   getCartLegacy: async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    return this.getCart(user?.id);
+    return cartService.getCart(user?.id);
   },
 
   addToCartLegacy: async (body) => {
     const { data: { user } } = await supabase.auth.getUser();
-    return this.addToCart(user?.id, body.productId, body.quantity || 1);
+    return cartService.addToCart(user?.id, body.productId, body.quantity || 1);
   },
 
-  updateCartItem: async (cartId, quantity) => this.updateQuantity(cartId, quantity),
-  removeFromCartLegacy: async (cartId) => this.removeFromCart(cartId),
+  updateCartItem: async (cartId, quantity) => cartService.updateQuantity(cartId, quantity),
+  removeFromCartLegacy: async (cartId) => cartService.removeFromCart(cartId),
 };
 
 export const getCart = (userId) => cartService.getCart(userId);

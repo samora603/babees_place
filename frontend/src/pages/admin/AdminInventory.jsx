@@ -49,35 +49,33 @@ export default function AdminInventory() {
                 <th className="text-left p-4">Category</th>
                 <th className="text-left p-4">Price</th>
                 <th className="text-left p-4">Stock</th>
-                <th className="text-left p-4">Sold</th>
                 <th className="p-4" />
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
               {products.map((p) => (
-                <tr key={p._id} className="hover:bg-surface/50 transition-colors">
+                <tr key={p.id} className="hover:bg-surface/50 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <img src={p.images?.[0]?.url || '/placeholder.png'} alt={p.name} className="w-8 h-8 rounded-lg object-cover" />
+                      <img src={p.images?.[0]?.url || p.image_url || '/placeholder.png'} alt={p.name} className="w-8 h-8 rounded-lg object-cover" />
                       <span className="font-medium line-clamp-1">{p.name}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-slate-400">{p.category?.name}</td>
+                  <td className="p-4 text-slate-400">{p.categories?.name || p.category}</td>
                   <td className="p-4 text-brand-400">{formatCurrency(p.price)}</td>
                   <td className="p-4">
-                    {editing?.id === p._id ? (
+                    {editing?.id === p.id ? (
                       <div className="flex gap-2 items-center">
-                        <input type="number" min="0" value={editing.stock} onChange={(e) => setEditing({ id: p._id, stock: Number(e.target.value) })} className="input py-1 w-20 text-center" />
-                        <button onClick={() => saveStock(p._id)} className="btn-primary text-xs py-1 px-2">Save</button>
+                        <input type="number" min="0" value={editing.stock} onChange={(e) => setEditing({ id: p.id, stock: Number(e.target.value) })} className="input py-1 w-20 text-center" />
+                        <button onClick={() => saveStock(p.id)} className="btn-primary text-xs py-1 px-2">Save</button>
                         <button onClick={() => setEditing(null)} className="text-xs text-slate-400 hover:text-white">✕</button>
                       </div>
                     ) : (
-                      <span className={p.stock <= p.lowStockThreshold ? 'text-orange-400 font-bold' : 'text-slate-300'}>{p.stock}</span>
+                      <span className={p.stock <= 5 ? 'text-orange-400 font-bold' : 'text-slate-300'}>{p.stock}</span>
                     )}
                   </td>
-                  <td className="p-4 text-slate-400">{p.soldCount}</td>
                   <td className="p-4 text-right">
-                    <button onClick={() => setEditing({ id: p._id, stock: p.stock })} className="btn-ghost text-xs px-2 py-1 text-brand-400">Edit</button>
+                    <button onClick={() => setEditing({ id: p.id, stock: p.stock })} className="btn-ghost text-xs px-2 py-1 text-brand-400">Edit</button>
                   </td>
                 </tr>
               ))}

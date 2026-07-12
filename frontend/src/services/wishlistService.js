@@ -4,7 +4,7 @@ export const wishlistService = {
   getWishlist: async (userId) => {
     try {
       if (!userId) return { data: { products: [] }, error: null };
-      const { data, error } = await supabase.from('wishlist').select('*, products(*)').eq('user_id', userId);
+      const { data, error } = await supabase.from('wishlists').select('*, products(*)').eq('user_id', userId);
       if (error) {
         console.error('wishlistService.getWishlist error:', error);
         return { data: { products: [] }, error };
@@ -19,9 +19,9 @@ export const wishlistService = {
   addToWishlist: async (userId, productId) => {
     try {
       if (!userId || !productId) return { data: { products: [] }, error: null };
-      const { data: existing } = await supabase.from('wishlist').select('*').eq('user_id', userId).eq('product_id', productId).maybeSingle();
+      const { data: existing } = await supabase.from('wishlists').select('*').eq('user_id', userId).eq('product_id', productId).maybeSingle();
       if (existing) return { data: { products: [existing] }, error: null };
-      const { data, error } = await supabase.from('wishlist').insert({ user_id: userId, product_id: productId }).select('*').single();
+      const { data, error } = await supabase.from('wishlists').insert({ user_id: userId, product_id: productId }).select('*').single();
       if (error) return { data: { products: [] }, error };
       return { data: { products: [data] }, error: null };
     } catch (err) {
@@ -33,7 +33,7 @@ export const wishlistService = {
   removeFromWishlist: async (userId, productId) => {
     try {
       if (!userId || !productId) return { data: { products: [] }, error: null };
-      const { error } = await supabase.from('wishlist').delete().eq('user_id', userId).eq('product_id', productId);
+      const { error } = await supabase.from('wishlists').delete().eq('user_id', userId).eq('product_id', productId);
       return { data: { products: [] }, error };
     } catch (err) {
       console.error('wishlistService.removeFromWishlist exception:', err);

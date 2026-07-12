@@ -104,7 +104,7 @@ export default function AdminOrders() {
                   </div>
                 </td>
 
-                <td className="p-2">{formatCurrency(o.total_amount ?? o.total_price)}</td>
+                <td className="p-2">{formatCurrency(o.total)}</td>
 
                 <td className="p-2">
                   <OrderStatusBadge status={o.status} />

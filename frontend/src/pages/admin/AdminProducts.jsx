@@ -26,7 +26,7 @@ export default function AdminProducts() {
 
   const handleToggle = async (id, isActive) => {
     try {
-      await adminService.updateProduct(id, { isActive: !isActive });
+      await adminService.updateProduct(id, { is_active: !isActive });
       fetchProducts();
       toast.success(isActive ? 'Product deactivated' : 'Product activated');
     } catch { toast.error('Action failed'); }
@@ -58,27 +58,27 @@ export default function AdminProducts() {
             </thead>
             <tbody className="divide-y divide-surface-border">
               {products.map((p) => (
-                <tr key={p._id} className="hover:bg-surface/50 transition-colors">
+                <tr key={p.id} className="hover:bg-surface/50 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <img src={p.images?.[0]?.url || '/placeholder.png'} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
+                      <img src={p.images?.[0]?.url || p.image_url || '/placeholder.png'} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
                       <span className="font-medium line-clamp-1">{p.name}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-brand-400 font-semibold">{formatCurrency(p.discountPrice || p.price)}</td>
+                  <td className="p-4 text-brand-400 font-semibold">{formatCurrency(p.discount_price || p.price)}</td>
                   <td className="p-4">
                     <span className={p.stock <= 5 ? 'text-orange-400' : 'text-slate-300'}>{p.stock}</span>
                   </td>
-                  <td className="p-4 text-slate-400">{p.category?.name}</td>
+                  <td className="p-4 text-slate-400">{p.categories?.name || p.category}</td>
                   <td className="p-4">
-                    <span className={`badge ${p.isActive ? 'bg-green-400/10 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                      {p.isActive ? 'Active' : 'Inactive'}
+                    <span className={`badge ${p.is_active ? 'bg-green-400/10 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+                      {p.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2 justify-end">
-                      <Link to={`/admin/products/${p._id}/edit`} className="btn-ghost p-1.5 text-slate-400 hover:text-white"><FiEdit2 size={16} /></Link>
-                      <button onClick={() => handleToggle(p._id, p.isActive)} className="btn-ghost p-1.5 text-slate-400 hover:text-brand-400"><FiPower size={16} /></button>
+                      <Link to={`/admin/products/${p.id}/edit`} className="btn-ghost p-1.5 text-slate-400 hover:text-white"><FiEdit2 size={16} /></Link>
+                      <button onClick={() => handleToggle(p.id, p.is_active)} className="btn-ghost p-1.5 text-slate-400 hover:text-brand-400"><FiPower size={16} /></button>
                     </div>
                   </td>
                 </tr>

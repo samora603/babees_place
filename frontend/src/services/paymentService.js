@@ -1,14 +1,11 @@
-import { supabase } from '@/lib/supabase';
+// Payments are DEFERRED (Phase 2). The `payments` table is intentionally NOT
+// part of the approved canonical schema (see Reconciliation_Decision_Log.md).
+// Real payment processing (M-Pesa, etc.) requires a server-side integration and
+// a dedicated table designed in a later phase. These methods are guarded so they
+// never query a non-existent table.
+const FEATURE_DEFERRED = { message: 'Payments are not available yet.' };
 
 export const paymentService = {
-    createPayment: async (payload) => {
-        // If you have a payments table, insert a record to keep history. Real payment processing
-        // still requires server-side integration (MPesa, Stripe, etc.). This is a local stub.
-        const { data, error } = await supabase.from('payments').insert(payload).select().single();
-        return { data: { data, error } };
-    },
-    verifyPayment: async (id) => {
-        const { data, error } = await supabase.from('payments').select('*').eq('id', id).single();
-        return { data: { data, error } };
-    },
+    createPayment: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
+    verifyPayment: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
 };

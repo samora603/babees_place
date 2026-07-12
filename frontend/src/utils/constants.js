@@ -18,15 +18,15 @@ export const DELIVERY_TYPES = {
     delivery: { label: 'Delivery', icon: '🚚' },
 };
 
+// Canonical profile roles (profiles.role): 'customer' | 'admin'.
 export const ROLES = {
-    user: 'user',
+    customer: 'customer',
     admin: 'admin',
 };
 
+// Sorting is limited to columns that exist in the canonical products table.
 export const SORT_OPTIONS = [
     { value: '-createdAt', label: 'Newest' },
     { value: 'price', label: 'Price: Low → High' },
     { value: '-price', label: 'Price: High → Low' },
-    { value: '-rating', label: 'Top Rated' },
-    { value: '-soldCount', label: 'Best Selling' },
 ];

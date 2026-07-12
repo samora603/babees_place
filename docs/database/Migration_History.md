@@ -1,6 +1,6 @@
 # Migration History
 
-**Last updated:** 2026-07-12 (Phase 1.7A — Baseline Adoption)
+**Last updated:** 2026-07-12 (Phase 1.7B WS4 — Final Validation; forward migrations 002–010 recorded)
 **Live project:** `qfcygrxrfszcdltangec` ("Babis-place")
 **Live migration history:** **empty** — the live database was built manually; no migration
 has ever been recorded on the remote `supabase_migrations.schema_migrations` table.
@@ -13,12 +13,31 @@ status. Classification values: **Active** (part of the forward sequence), **Arch
 
 ## Active migration sequence
 
-| Order | Version / File | Purpose | Applied on live? | Notes |
-|---|---|---|---|---|
-| 1 | `supabase/migrations/001_initial_schema.sql` | Official baseline — faithful snapshot of the current live `public` schema (7 tables, `order_status` enum, PKs, 2 FKs, RLS enable, 10 policies, grants) | **No** (requires `migration repair` — reconciliation step, not done in 1.7A) | Source of truth for all future migrations. Only a provenance comment header was added to the pg_dump. |
+Forward migrations `002`–`010` were authored in Phase 1.7B Workstream 1, reviewed in WS1
+Review, and validated in WS3/WS4. They are **authored and locally validated only** — none has
+been applied to live (live migration history is still empty; see below). The `Strategy ID`
+column maps each file to the `M0..M8` plan in `Migration_Strategy.md`.
 
-> No forward migrations (`M1..M8` in `Migration_Strategy.md`) have been authored yet. They
-> will be created **after** baseline adoption is confirmed on live (Phase 1.7B+).
+| Order | Version / File | Strategy ID | Purpose | Applied on live? |
+|---|---|---|---|---|
+| 1 | `001_initial_schema.sql` | M0 | Official baseline — faithful snapshot of the live `public` schema (7 tables, `order_status` enum, PKs, 2 FKs, RLS enable, 10 policies, grants). Only a provenance header was added. | **No** (requires `migration repair`) |
+| 2 | `002_additive_columns.sql` | M1 | Add app-expected columns (profiles `full_name`/`updated_at`; orders `payment_status`/`note`/`updated_at`; products `stock`/`discount_price`/`image_url`/`images`/`is_active`; order_items `image_url`/`created_at`). | No |
+| 3 | `003_functions_and_triggers.sql` | M4 | `is_admin()`, `handle_new_user()`+trigger, `set_updated_at()`+triggers, `place_order()`; revoke anon EXECUTE on `place_order`. | No |
+| 4 | `004_rls_and_security.sql` | M2 + M3 | Profiles role-escalation fix (`WITH CHECK` + admin policy); owner policies for cart_items/wishlists; public/admin for categories/products; remove direct order INSERT; broaden order_items SELECT to owner-or-admin. | No |
+| 5 | `005_integrity_constraints.sql` | M5a | Drop bad defaults; `created_at DEFAULT now()`; user_id FKs → auth.users (NOT VALID); `CHECK (quantity > 0)`. | No |
+| 6 | `006_storage_policies.sql` | M8 | Ensure `products` bucket; storage.objects policies (public read / admin write). | No |
+| 7 | `007_data_normalization.sql` 🛑 | M6 | **Gated.** Backfill full_name; normalize role + CHECK; repair category_id; dedupe cart/wishlist; status/payment_status CHECKs. | No |
+| 8 | `008_structural_reconciliation.sql` 🛑 | M7 | **Gated.** products PK `(id,name)`→`(id)`; rename `"Description"`→`description`; drop unused `order_status` enum. | No |
+| 9 | `009_product_integrity.sql` | M5b | Product-referencing FKs (NOT VALID); category_id FK (validated); `UNIQUE(user_id, product_id)` on cart_items/wishlists. | No |
+| 10 | `010_performance_optimizations.sql` | (M5 indexes / §5) | Indexes for FK/filter/sort paths + GIN full-text search on products. | No |
+
+🛑 = approval-gated (backup + maintenance window; mutates data / structure).
+
+> **Execution order note:** the file order `001→010` is the authoritative linear apply order
+> (validated: no circular dependencies). It linearizes the `Migration_Strategy.md` group
+> narrative (`M0→M1→M3→M2→M4→M5→M8→M6→M7`); `003` (M4) precedes `004` (M2+M3) because the
+> canonical M3 admin-role policy depends on `is_admin()` (M4). The Critical role-escalation
+> fix still lands at `004`, before any gated/data migration.
 
 ---
 
@@ -48,22 +67,30 @@ live** and none may be applied.
 
 ---
 
-## Naming convention (going forward)
+## Naming convention
 
-- Baseline keeps the numeric `001_` prefix to match all approved planning documents.
-- Forward migrations should use Supabase timestamped versions
-  (`<YYYYMMDDHHMMSS>_<description>.sql`) generated with `supabase migration new <name>`,
-  authored against the `M0..M8` plan in `Migration_Strategy.md`.
+- Baseline and the Phase 1.7B forward migrations use the numeric `NNN_` prefix
+  (`001`–`010`) to match all approved planning documents and to keep a single, obvious
+  linear apply order. This scheme is the adopted convention for this project.
 - `snake_case`, descriptive names; one logical change set per migration.
+- Any **future** migrations authored after this set may either continue the numeric scheme
+  (`011_…`) or use Supabase timestamped versions (`<YYYYMMDDHHMMSS>_<description>.sql`) — but
+  must sort **after** `010`.
 
 ---
 
-## Remaining work before forward migrations can be authored
+## Remaining work before the forward migrations can be applied to live
+
+Forward migrations `002`–`010` are **authored and validated**; the following steps gate their
+**application** (all deferred to Phase 1.8 — Staging Database Reconciliation):
 
 1. **Adopt baseline on live** (reconciliation, not done here): run
    `supabase migration repair --status applied 001` so the live history records the baseline,
-   then confirm `supabase db diff --linked` is clean. (Runbook §1 Stage 2 / `M0`.)
+   then confirm `supabase db diff --linked` is clean. (Runbook Stage 2 / `M0`.)
 2. Run the four read-only verifications (product `id` uniqueness, cart/wishlist duplicates,
-   storage bucket, distinct `profiles.role`) — gate the high-risk migrations.
-3. Obtain approvals for `M5`/`M6`/`M7` (see `Phase1_6_Execution_Readiness.md`).
-4. Only then author `M1..M8` as new timestamped migrations.
+   storage bucket existence/visibility, distinct `orders.status` + `profiles.role`) — these
+   gate the high-risk migrations `007`/`008`/`009`.
+3. Obtain approvals + backup + maintenance window for `007` (M6) and `008` (M7)
+   (see `Phase1_6_Execution_Readiness.md`).
+4. Apply on staging first, run the post-apply `VALIDATE CONSTRAINT` steps and smoke tests,
+   then push to production per the Runbook order.

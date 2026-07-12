@@ -35,7 +35,7 @@ export default function Footer() {
                <span className="w-8 h-px bg-brand-500"></span> Collection
             </h4>
             <ul className="space-y-3">
-              {[['All Products', '/shop'], ['New Arrivals', '/shop?sort=-createdAt'], ['Best Sellers', '/shop?sort=-soldCount']].map(([label, href]) => (
+              {[['All Products', '/shop'], ['New Arrivals', '/shop?sort=-createdAt'], ['Price: Low to High', '/shop?sort=price']].map(([label, href]) => (
                 <li key={href}><Link to={href} className="text-sm text-slate-400 hover:text-brand-400 hover:pl-2 transition-all duration-300">{label}</Link></li>
               ))}
             </ul>

@@ -1,5 +1,5 @@
 import { GiBee } from 'react-icons/gi';
-import { FiSettings, FiSliders } from 'react-icons/fi';
+import { FiSliders } from 'react-icons/fi';
 
 export default function AdminSettings() {
   return (

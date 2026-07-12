@@ -22,14 +22,15 @@ export const mapOrder = (row) => {
     image: item.image_url || item.image || '/placeholder.png',
   }));
 
-  const totalAmount = Number(row.total_amount ?? row.total_price ?? 0);
+  // Canonical column is `orders.total`; keep legacy fallbacks for any cached shapes.
+  const totalAmount = Number(row.total ?? row.total_amount ?? row.total_price ?? 0);
 
   return {
     id: row.id,
     _id: row.id,
     orderNumber: `#${String(row.id).slice(0, 8).toUpperCase()}`,
-    orderStatus: row.status ?? row.order_status,
-    status: row.status ?? row.order_status,
+    orderStatus: row.status,
+    status: row.status,
     paymentStatus: row.payment_status,
     totalAmount,
     total_amount: totalAmount,

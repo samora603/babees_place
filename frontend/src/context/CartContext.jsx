@@ -9,7 +9,7 @@ const CartContext = createContext(null);
 const getItemPrice = (item) => {
   const product = item?.product;
   if (!product) return 0;
-  return Number(product.discountPrice ?? product.price ?? 0);
+  return Number(product.discount_price ?? product.price ?? 0);
 };
 
 export const CartProvider = ({ children }) => {

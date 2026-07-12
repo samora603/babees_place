@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
 
+// The `addresses` table is DEFERRED (Phase 2) — it is not part of the approved
+// canonical schema. Address methods are guarded so they never query a missing
+// table; wire them to a real table when the feature is designed.
+const FEATURE_DEFERRED = { message: 'This feature is not available yet.' };
+
 export const userService = {
     getProfile: async () => {
         const { data, error } = await supabase.auth.getUser();
@@ -27,26 +32,9 @@ export const userService = {
         const { data, error } = await supabase.from('profiles').upsert(update).select().single();
         return { data: { data, error } };
     },
-    getAddresses: async () => {
-        const { data: userRes } = await supabase.auth.getUser();
-        const user = userRes.user;
-        if (!user) return { data: { data: [] } };
-        const { data, error } = await supabase.from('addresses').select('*').eq('user_id', user.id);
-        return { data: { data, error } };
-    },
-    addAddress: async (payload) => {
-        const { data: userRes } = await supabase.auth.getUser();
-        const user = userRes.user;
-        if (!user) return { data: { data: null, error: 'Not authenticated' } };
-        const { data, error } = await supabase.from('addresses').insert({ user_id: user.id, ...payload }).select();
-        return { data: { data, error } };
-    },
-    updateAddress: async (id, payload) => {
-        const { data, error } = await supabase.from('addresses').update(payload).eq('id', id).select();
-        return { data: { data, error } };
-    },
-    deleteAddress: async (id) => {
-        const { data, error } = await supabase.from('addresses').delete().eq('id', id).select();
-        return { data: { data, error } };
-    },
+    // Address book — DEFERRED (Phase 2); no `addresses` table in canonical schema.
+    getAddresses: async () => ({ data: { data: [], error: null } }),
+    addAddress: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
+    updateAddress: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
+    deleteAddress: async () => ({ data: { data: null, error: FEATURE_DEFERRED } }),
 };

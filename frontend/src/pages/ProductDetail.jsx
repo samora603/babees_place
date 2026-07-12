@@ -7,9 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { formatCurrency, getPrimaryImage } from '@/utils/helpers';
 import StarRating from '@/components/ui/StarRating';
 import QuantitySelector from '@/components/ui/QuantitySelector';
-import Spinner from '@/components/ui/Spinner';
 import { FiHeart, FiShoppingCart } from 'react-icons/fi';
-import toast from 'react-hot-toast';
 
 import Skeleton from '@/components/ui/Skeleton';
 
@@ -82,7 +80,7 @@ export default function ProductDetail() {
     const cartItem = {
       id: product.id || product._id || product.product_id,
       name: product.name || product.title || '',
-      price: product.discountPrice ?? product.price ?? 0,
+      price: product.discount_price ?? product.price ?? 0,
       image_url: getPrimaryImage(product.images || []),
       quantity: 1,
     };
@@ -112,7 +110,7 @@ export default function ProductDetail() {
         {/* Info */}
         <div className="space-y-5">
           <div>
-            <p className="text-sm text-slate-500 mb-1">{product.category?.name || product.category}</p>
+            <p className="text-sm text-slate-500 mb-1">{product.categories?.name || product.category}</p>
             <h1 className="font-display font-bold text-3xl text-white leading-tight">{product.name}</h1>
           </div>
 
@@ -122,9 +120,9 @@ export default function ProductDetail() {
           </div>
 
           <div className="flex items-baseline gap-3">
-            {product.discountPrice ? (
+            {product.discount_price ? (
               <>
-                <span className="font-display font-bold text-3xl text-brand-400">{formatCurrency(product.discountPrice)}</span>
+                <span className="font-display font-bold text-3xl text-brand-400">{formatCurrency(product.discount_price)}</span>
                 <span className="text-lg text-slate-500 line-through">{formatCurrency(product.price)}</span>
               </>
             ) : (

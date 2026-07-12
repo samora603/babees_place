@@ -20,7 +20,7 @@ export const WishlistProvider = ({ children }) => {
 
   useEffect(() => {
     fetchWishlist();
-    const channel = supabase.channel('wishlist').on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist' }, () => fetchWishlist()).subscribe();
+    const channel = supabase.channel('wishlists').on('postgres_changes', { event: '*', schema: 'public', table: 'wishlists' }, () => fetchWishlist()).subscribe();
     return () => supabase.removeChannel(channel);
   }, [fetchWishlist]);
 

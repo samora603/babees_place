@@ -1,5 +1,4 @@
 import ProductCard from './ProductCard';
-import Spinner from '@/components/ui/Spinner';
 
 import ProductCardSkeleton from './ProductCardSkeleton';
 
@@ -26,7 +25,7 @@ export default function ProductGrid({ products = [], loading = false, emptyMessa
   return (
     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {products.map((product) => (
-        <ProductCard key={product._id} product={product} />
+        <ProductCard key={product.id || product._id} product={product} />
       ))}
     </div>
   );
