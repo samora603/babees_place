@@ -58,7 +58,6 @@ function App() {
           }
         />
 
-        <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/:idOrSlug" element={<ProductDetail />} />
 

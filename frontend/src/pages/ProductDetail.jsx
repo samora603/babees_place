@@ -41,8 +41,7 @@ export default function ProductDetail() {
         setError(err || new Error('Unable to load product'));
         setProduct(null);
       } finally {
-        if (!mounted) return;
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
     if (id) load();
