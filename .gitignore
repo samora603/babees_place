@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# Babees Place — repository-level ignore rules
+# Repaired during Phase 0 (previously this path was an empty directory).
+# ---------------------------------------------------------------------------
+
+# Dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+**/dist/
+**/build/
+.vite/
+
+# Environment / secrets (never commit real env files)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+signing_keys.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# Supabase local state (already covered by supabase/.gitignore, repeated for safety)
+supabase/.branches/
+supabase/.temp/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+# LibreOffice/OpenOffice lock files
+.~lock.*#
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Misc caches
+.cache/
+.eslintcache
