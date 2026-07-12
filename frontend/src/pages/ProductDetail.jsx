@@ -4,6 +4,7 @@ import { productService } from '@/services/productService';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
+import { getImageAtIndex } from '@/utils/images';
 import { formatCurrency, getPrimaryImage } from '@/utils/helpers';
 import { capQuantity, isOutOfStock } from '@/constants/inventory';
 import StarRating from '@/components/ui/StarRating';
@@ -13,7 +14,7 @@ import { FiHeart, FiShoppingCart } from 'react-icons/fi';
 import Skeleton from '@/components/ui/Skeleton';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { idOrSlug } = useParams();
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const { isAuthenticated } = useAuth();
@@ -30,7 +31,7 @@ export default function ProductDetail() {
       setLoading(true);
       setError(null);
       try {
-        const { data, error: svcErr } = await productService.getProductById(id);
+        const { data, error: svcErr } = await productService.getProduct(idOrSlug);
         if (svcErr) throw svcErr;
         if (!mounted) return;
         setProduct(data?.data ?? null);
@@ -43,9 +44,9 @@ export default function ProductDetail() {
         if (mounted) setLoading(false);
       }
     };
-    if (id) load();
+    if (idOrSlug) load();
     return () => { mounted = false; };
-  }, [id]);
+  }, [idOrSlug]);
 
   if (loading) return (
     <div className="section-container py-10">
@@ -90,17 +91,20 @@ export default function ProductDetail() {
     addToCart(cartItem, capQuantity(quantity, stock));
   };
 
+  const galleryImages = Array.isArray(product.images) ? product.images : [];
+  const mainImageSrc = getImageAtIndex(galleryImages, activeImage);
+
   return (
     <div className="section-container py-10">
       <div className="grid md:grid-cols-2 gap-10 lg:gap-16">
         {/* Images */}
         <div className="space-y-3">
           <div className="aspect-square rounded-2xl overflow-hidden bg-surface-card border border-surface-border">
-            <img src={getPrimaryImage(product.images)} alt={product.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+            <img src={mainImageSrc} alt={product.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
           </div>
-          {Array.isArray(product.images) && product.images.length > 1 && (
+          {galleryImages.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
-              {product.images.map((img, i) => (
+              {galleryImages.map((img, i) => (
                 <button key={i} onClick={() => setActiveImage(i)}
                   className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-colors ${i === activeImage ? 'border-brand-500' : 'border-surface-border'}`}>
                   <img src={img.url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />

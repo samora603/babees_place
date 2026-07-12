@@ -4,7 +4,6 @@ import { FiArrowRight, FiShoppingBag, FiTruck, FiSmartphone } from 'react-icons/
 import { GiBee } from 'react-icons/gi';
 
 import { productService } from '@/services/productService';
-import { supabase } from '@/lib/supabaseClient';
 
 import ProductGrid from '@/components/products/ProductGrid';
 import Hero from '@/components/layout/Hero';
@@ -14,6 +13,7 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -21,22 +21,30 @@ export default function Home() {
     const loadHomeData = async () => {
       setLoading(true);
       setError(null);
+      setUsingFallback(false);
 
       try {
-        const [productsRes, catRes] = await Promise.all([
-          productService.getProducts({ limit: 8 }),
+        const [featuredRes, catRes] = await Promise.all([
+          productService.getProducts({ featured: true, limit: 8 }),
           productService.getCategories(),
         ]);
 
         if (!mounted) return;
 
-        const products = productsRes?.data?.data || [];
+        let products = featuredRes?.data?.data || [];
+
+        if (products.length === 0) {
+          const fallbackRes = await productService.getProducts({ limit: 8, sort: '-createdAt' });
+          products = fallbackRes?.data?.data || [];
+          setUsingFallback(products.length > 0);
+        }
+
         const cats = catRes?.data?.data || [];
 
         setFeatured(products);
         setCategories(cats);
 
-        if (productsRes?.error) {
+        if (featuredRes?.error) {
           setError('Failed to load products from Supabase');
         }
       } catch (err) {
@@ -56,17 +64,6 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, []);
-
-  // 🔥 DEBUG TEST (remove later if everything works)
-  useEffect(() => {
-    supabase
-      .from('products')
-      .select('*')
-      .limit(5)
-      .then(({ data, error }) => {
-        console.log('SUPABASE TEST:', { data, error });
-      });
   }, []);
 
   if (loading) {
@@ -135,7 +132,7 @@ export default function Home() {
             {categories.map((cat) => (
               <Link
                 key={cat.id || cat.name}
-                to={`/shop?category=${cat.name}`}
+                to={`/shop?category=${cat.id}`}
                 className="px-4 py-2 bg-[#111] border border-gray-700 rounded-full text-sm hover:bg-brand-500 hover:text-black transition"
               >
                 {cat.name}
@@ -153,7 +150,7 @@ export default function Home() {
               Featured Products
             </h2>
             <p className="text-gray-400 text-sm">
-              Hand-picked selections
+              {usingFallback ? 'Latest arrivals' : 'Hand-picked selections'}
             </p>
           </div>
 

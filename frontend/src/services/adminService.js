@@ -5,6 +5,25 @@ import { LOW_STOCK_THRESHOLD } from '@/constants/inventory';
 // are intentionally absent from the approved canonical schema.
 const FEATURE_DEFERRED = { message: 'This feature is not available yet.' };
 
+async function deleteProductStorage(productId) {
+    try {
+        const prefix = `products/${productId}`;
+        const { data: listed, error: listError } = await supabase.storage
+            .from('products')
+            .list(`products/${productId}`);
+        if (listError) {
+            return { error: listError };
+        }
+        const paths = (listed || []).map((f) => `${prefix}/${f.name}`);
+        if (paths.length === 0) return { error: null };
+        const { error: removeError } = await supabase.storage.from('products').remove(paths);
+        if (removeError) return { error: removeError };
+        return { error: null };
+    } catch (error) {
+        return { error };
+    }
+}
+
 // Admin operations implemented against Supabase. These return objects shaped
 // similarly to the previous API (wrapped in `{ data: ... }`) where callers
 // expect that. For more advanced behavior (uploads, complex stats) the
@@ -200,23 +219,40 @@ export const adminService = {
         return { data: { data, error } };
     },
     deleteProduct: async (id) => {
+        const storageResult = await deleteProductStorage(id);
+        if (storageResult.error) {
+            return { data: { data: null, error: storageResult.error } };
+        }
         const { data, error } = await supabase.from('products').delete().eq('id', id).select();
         return { data: { data, error } };
     },
+    deleteProductStorage,
+    deleteStoragePaths: async (paths = []) => {
+        if (!paths.length) return { error: null };
+        try {
+            const { error } = await supabase.storage.from('products').remove(paths);
+            return { error: error || null };
+        } catch (error) {
+            return { error };
+        }
+    },
     uploadImages: async (id, formData) => {
-        // Attempt to upload images to Supabase Storage 'products' bucket.
-        // Caller should provide formData with files; here we return an error if storage not configured.
         try {
             const files = formData.getAll('images');
             const uploaded = [];
             for (const file of files) {
-                const path = `products/${id}/${file.name}`;
-                const { error } = await supabase.storage.from('products').upload(path, file, { upsert: true });
+                const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
+                const safeName = `${crypto.randomUUID()}.${ext}`;
+                const path = `products/${id}/${safeName}`;
+                const { error } = await supabase.storage.from('products').upload(path, file, {
+                    upsert: false,
+                    contentType: file.type,
+                });
                 if (error) throw error;
                 const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(path);
                 uploaded.push({ path, url: publicUrl });
             }
-            return { data: { data: uploaded } };
+            return { data: { data: uploaded, error: null } };
         } catch (error) {
             return { data: { data: null, error } };
         }

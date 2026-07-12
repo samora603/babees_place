@@ -1,7 +1,7 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   FiGrid, FiPackage, FiShoppingBag, FiUsers, FiBarChart2,
-  FiMapPin, FiSettings, FiLogOut,
+  FiMapPin, FiSettings, FiLogOut, FiTag,
 } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/admin/dashboard',        icon: FiGrid,       label: 'Command Center' },
   { to: '/admin/orders',           icon: FiShoppingBag,label: 'Acquisitions'   },
   { to: '/admin/products',         icon: FiPackage,    label: 'Collection'     },
+  { to: '/admin/categories',       icon: FiTag,        label: 'Categories'     },
   { to: '/admin/inventory',        icon: FiBarChart2,  label: 'Inventory'      },
   { to: '/admin/users',            icon: FiUsers,      label: 'Clients'        },
   { to: '/admin/pickup-locations', icon: FiMapPin,     label: 'Boutiques'      },
