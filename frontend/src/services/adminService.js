@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { LOW_STOCK_THRESHOLD } from '@/constants/inventory';
 
 // Standard error returned by deferred (Phase 2) features whose backing tables
 // are intentionally absent from the approved canonical schema.
@@ -37,7 +38,8 @@ export const adminService = {
         supabase
           .from("products")
           .select("id")
-          .lt("stock", 5),
+          .gt("stock", 0)
+          .lt("stock", LOW_STOCK_THRESHOLD),
       ]);
 
       const orders = revenueResult.data || [];
@@ -235,21 +237,50 @@ export const adminService = {
     },
 
     // Inventory
-    getInventory: async () => {
-        const { data, error } = await supabase
+    getInventory: async ({ stockStatus, limit, search } = {}) => {
+        let query = supabase
             .from('products')
-            .select('id, name, stock, price, category, images');
+            .select('id, name, stock, price, category, images, is_active, categories (id, name)')
+            .order('name', { ascending: true });
+
+        if (stockStatus === 'out') {
+            query = query.lte('stock', 0);
+        } else if (stockStatus === 'low') {
+            query = query.gt('stock', 0).lt('stock', LOW_STOCK_THRESHOLD);
+        } else if (stockStatus === 'in') {
+            query = query.gte('stock', LOW_STOCK_THRESHOLD);
+        }
+
+        if (search) {
+            query = query.ilike('name', `%${search}%`);
+        }
+        if (limit) {
+            query = query.limit(Number(limit));
+        }
+
+        const { data, error } = await query;
         return { data: { data: data || [], error } };
     },
     getLowStock: async () => {
         const { data, error } = await supabase
             .from('products')
-            .select('id, name, stock, price, category, images')
-            .lt('stock', 5);
+            .select('id, name, stock, price, category, images, is_active, categories (id, name)')
+            .gt('stock', 0)
+            .lt('stock', LOW_STOCK_THRESHOLD)
+            .order('stock', { ascending: true });
         return { data: { data: data || [], error } };
     },
     updateStock: async (productId, body) => {
-        const { data, error } = await supabase.from('products').update(body).eq('id', productId).select().single();
+        const stock = Number(body?.stock);
+        if (Number.isNaN(stock) || stock < 0) {
+            return { data: { data: null }, error: { message: 'Stock must be a non-negative number' } };
+        }
+        const { data, error } = await supabase
+            .from('products')
+            .update({ stock })
+            .eq('id', productId)
+            .select()
+            .single();
         return { data: { data, error } };
     },
 

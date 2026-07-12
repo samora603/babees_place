@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
 import { formatCurrency, getPrimaryImage } from '@/utils/helpers';
+import { capQuantity, isOutOfStock } from '@/constants/inventory';
 import StarRating from '@/components/ui/StarRating';
 import QuantitySelector from '@/components/ui/QuantitySelector';
 import { FiHeart, FiShoppingCart } from 'react-icons/fi';
@@ -74,17 +75,19 @@ export default function ProductDetail() {
   if (error) return <div className="section-container py-20 text-center text-red-400">Error loading product.</div>;
   if (!product) return <div className="section-container py-20 text-center text-slate-400">Product not found.</div>;
 
+  const stock = product.stock ?? 0;
+  const isActive = product.is_active !== false;
+  const canAddToCart = isActive && !isOutOfStock(stock);
+
   const handleAddToCart = () => {
-    if (!product) return;
-    // construct minimal product shape required by Phase 2 cart
+    if (!product || !canAddToCart) return;
     const cartItem = {
       id: product.id || product._id || product.product_id,
       name: product.name || product.title || '',
       price: product.discount_price ?? product.price ?? 0,
       image_url: getPrimaryImage(product.images || []),
-      quantity: 1,
     };
-    addToCart(cartItem);
+    addToCart(cartItem, capQuantity(quantity, stock));
   };
 
   return (
@@ -153,14 +156,15 @@ export default function ProductDetail() {
           ))}
 
           <div className="flex items-center gap-4">
-            <QuantitySelector value={quantity} max={product.stock || 9999} onChange={setQuantity} />
-            <span className="text-sm text-slate-500">{product.stock ?? '—'} in stock</span>
+            <QuantitySelector value={quantity} max={stock > 0 ? stock : 1} onChange={(v) => setQuantity(capQuantity(v, stock))} />
+            <span className="text-sm text-slate-500">{stock} in stock</span>
           </div>
 
           <div className="flex gap-3">
-            <button onClick={handleAddToCart} disabled={(product.stock ?? 0) === 0}
+            <button onClick={handleAddToCart} disabled={!canAddToCart}
               className="btn-primary flex-1 flex items-center justify-center gap-2">
-              <FiShoppingCart /> {(product.stock ?? 0) === 0 ? 'Out of Stock' : 'Add to Cart'}
+              <FiShoppingCart />
+              {!isActive ? 'Unavailable' : isOutOfStock(stock) ? 'Out of Stock' : 'Add to Cart'}
             </button>
             <button onClick={() => isAuthenticated && toggleWishlist(product.id || product._id)}
               className={`btn-secondary px-4 ${isWishlisted(product.id || product._id) ? 'text-red-400 border-red-400/40' : ''}`}>

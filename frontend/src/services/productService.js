@@ -13,6 +13,7 @@ export const productService = {
       if (params.minPrice) query = query.gte('price', Number(params.minPrice));
       if (params.maxPrice) query = query.lte('price', Number(params.maxPrice));
       if (params.inStock) query = query.gt('stock', 0);
+      if (params.includeInactive !== true) query = query.eq('is_active', true);
       // Sorting is limited to canonical columns (created_at, price).
       const sortMap = {
         '-createdAt': ['created_at', false],

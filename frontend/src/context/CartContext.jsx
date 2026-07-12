@@ -57,7 +57,7 @@ export const CartProvider = ({ children }) => {
       quantity
     );
 
-    if (error) return toast.error("Failed to add item");
+    if (error) return toast.error(error.message || "Failed to add item");
 
     toast.success("Added to cart");
     await loadCart();
@@ -75,7 +75,7 @@ export const CartProvider = ({ children }) => {
   const setQuantity = async (cartId, quantity) => {
     const { error } = await cartService.updateQuantity(cartId, quantity);
 
-    if (error) return toast.error("Failed to update quantity");
+    if (error) return toast.error(error.message || "Failed to update quantity");
 
     await loadCart();
   };

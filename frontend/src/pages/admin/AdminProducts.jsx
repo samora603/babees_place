@@ -7,6 +7,7 @@ import Spinner from '@/components/ui/Spinner';
 import Pagination from '@/components/ui/Pagination';
 import { FiPlus, FiEdit2, FiPower } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { isLowStock } from '@/constants/inventory';
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -17,7 +18,7 @@ export default function AdminProducts() {
 
   const fetchProducts = () => {
     setLoading(true);
-    productService.getProducts({ page, limit: 20, ...(search && { search }) })
+    productService.getProducts({ page, limit: 20, includeInactive: true, ...(search && { search }) })
       .then(({ data }) => { setProducts(data.data); setPages(data.pages); })
       .finally(() => setLoading(false));
   };
@@ -67,7 +68,7 @@ export default function AdminProducts() {
                   </td>
                   <td className="p-4 text-brand-400 font-semibold">{formatCurrency(p.discount_price || p.price)}</td>
                   <td className="p-4">
-                    <span className={p.stock <= 5 ? 'text-orange-400' : 'text-slate-300'}>{p.stock}</span>
+                    <span className={isLowStock(p.stock) ? 'text-orange-400' : 'text-slate-300'}>{p.stock}</span>
                   </td>
                   <td className="p-4 text-slate-400">{p.categories?.name || p.category}</td>
                   <td className="p-4">

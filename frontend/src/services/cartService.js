@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { validateProductForCart, validateCartForCheckout } from '@/services/inventoryValidation';
 
 const normalizeRows = (rows = []) => rows.map((row) => ({
   id: row.id,
@@ -7,6 +8,16 @@ const normalizeRows = (rows = []) => rows.map((row) => ({
   created_at: row.created_at,
   product: row.products ?? null,
 }));
+
+const fetchProductForCart = async (productId) => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, stock, is_active')
+    .eq('id', productId)
+    .maybeSingle();
+  if (error) return { product: null, error };
+  return { product: data, error: null };
+};
 
 export const cartService = {
   getCart: async (userId) => {
@@ -27,13 +38,25 @@ export const cartService = {
   addToCart: async (userId, productId, quantity = 1) => {
     try {
       if (!userId || !productId) return { data: { items: [] }, error: null };
+
+      const { product, error: productError } = await fetchProductForCart(productId);
+      if (productError) return { data: { items: [] }, error: productError };
+      if (!product) return { data: { items: [] }, error: { message: 'Product not found' } };
+
       const { data: existing } = await supabase.from('cart_items').select('*').eq('user_id', userId).eq('product_id', productId).maybeSingle();
+      const existingQty = Number(existing?.quantity || 0);
+      const validation = validateProductForCart(product, quantity, existingQty);
+      if (!validation.valid) {
+        return { data: { items: [] }, error: { message: validation.error } };
+      }
+
+      const nextQty = existingQty + Number(quantity);
       if (existing) {
-        const { data, error } = await supabase.from('cart_items').update({ quantity: Number(existing.quantity || 0) + Number(quantity) }).eq('id', existing.id).select('*').single();
+        const { data, error } = await supabase.from('cart_items').update({ quantity: nextQty }).eq('id', existing.id).select('*, products(*)').single();
         if (error) return { data: { items: [] }, error };
         return { data: { items: normalizeRows([data]) }, error: null };
       }
-      const { data, error } = await supabase.from('cart_items').insert({ user_id: userId, product_id: productId, quantity: Number(quantity) }).select('*').single();
+      const { data, error } = await supabase.from('cart_items').insert({ user_id: userId, product_id: productId, quantity: Number(quantity) }).select('*, products(*)').single();
       if (error) return { data: { items: [] }, error };
       return { data: { items: normalizeRows([data]) }, error: null };
     } catch (err) {
@@ -47,7 +70,22 @@ export const cartService = {
       if (Number(quantity) <= 0) {
         return cartService.removeFromCart(cartId);
       }
-      const { data, error } = await supabase.from('cart_items').update({ quantity: Number(quantity) }).eq('id', cartId).select('*').single();
+
+      const { data: line, error: lineError } = await supabase
+        .from('cart_items')
+        .select('*, products(id, name, stock, is_active)')
+        .eq('id', cartId)
+        .maybeSingle();
+
+      if (lineError) return { data: { items: [] }, error: lineError };
+      if (!line) return { data: { items: [] }, error: { message: 'Cart item not found' } };
+
+      const validation = validateProductForCart(line.products, quantity, 0);
+      if (!validation.valid) {
+        return { data: { items: [] }, error: { message: validation.error } };
+      }
+
+      const { data, error } = await supabase.from('cart_items').update({ quantity: Number(quantity) }).eq('id', cartId).select('*, products(*)').single();
       if (error) return { data: { items: [] }, error };
       return { data: { items: normalizeRows([data]) }, error: null };
     } catch (err) {
@@ -75,6 +113,14 @@ export const cartService = {
       console.error('cartService.clearCart exception:', err);
       return { data: { items: [] }, error: err };
     }
+  },
+
+  /** Re-fetch cart with fresh product stock for checkout validation. */
+  validateCartStock: async (userId) => {
+    const { data, error } = await cartService.getCart(userId);
+    if (error) return { valid: false, issues: [], error };
+    const result = validateCartForCheckout(data.items || []);
+    return { ...result, error: null };
   },
 
   // Compatibility helpers for existing UI/pages.

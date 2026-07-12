@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FiHeart, FiShoppingCart, FiStar } from 'react-icons/fi';
 import { formatCurrency, getPrimaryImage, discountPercent } from '@/utils/helpers';
+import { isOutOfStock, isLowStock } from '@/constants/inventory';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
@@ -17,10 +18,14 @@ export default function ProductCard({ product }) {
   const hasDiscount = product.discount_price && product.discount_price < product.price;
   const discount = hasDiscount ? discountPercent(product.price, product.discount_price) : 0;
 
+  const stock = product.stock ?? 0;
+  const isActive = product.is_active !== false;
+  const unavailable = !isActive || isOutOfStock(stock);
+
   const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) { toast.error('Please sign in to add to cart'); return; }
-    if (product.stock === 0) { toast.error('Out of stock'); return; }
+    if (unavailable) { toast.error(isActive ? 'Out of stock' : 'Product unavailable'); return; }
     // Construct minimal product shape required by CartContext
     const cartItem = {
       id: productId,
@@ -60,9 +65,15 @@ export default function ProductCard({ product }) {
             -{discount}%
           </span>
         )}
-        {product.stock === 0 && (
-          <span className="absolute top-3 left-3 bg-[#111] border border-slate-600 text-slate-300 text-xs font-semibold px-3 py-1 rounded-sm tracking-wider uppercase">Out of Stock</span>
-        )}
+        {unavailable ? (
+          <span className="absolute top-3 left-3 bg-[#111] border border-slate-600 text-slate-300 text-xs font-semibold px-3 py-1 rounded-sm tracking-wider uppercase">
+            {!isActive ? 'Unavailable' : 'Out of Stock'}
+          </span>
+        ) : isLowStock(stock) ? (
+          <span className="absolute top-3 left-3 bg-[#111] border border-orange-500/40 text-orange-300 text-xs font-semibold px-3 py-1 rounded-sm tracking-wider">
+            Only {stock} left
+          </span>
+        ) : null}
 
         {/* Wishlist btn */}
         <button
@@ -105,11 +116,11 @@ export default function ProductCard({ product }) {
 
           <button
             onClick={handleAddToCart}
-            disabled={product.stock === 0}
+            disabled={unavailable}
             className="w-10 h-10 rounded border border-brand-500/30 bg-brand-500/5 text-brand-500 hover:bg-brand-500 hover:text-black flex items-center justify-center transition-all duration-300 disabled:opacity-30 shadow-[0_0_10px_rgba(212,175,55,0.05)] hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]"
             aria-label="Add to cart"
           >
-            <FiShoppingCart size={18} className={`${product.stock > 0 ? 'group-hover/btn:scale-110' : ''} transition-transform`} />
+            <FiShoppingCart size={18} className={`${!unavailable ? 'group-hover/btn:scale-110' : ''} transition-transform`} />
           </button>
         </div>
       </div>

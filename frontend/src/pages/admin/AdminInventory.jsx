@@ -3,6 +3,7 @@ import { adminService } from '@/services/adminService';
 import { formatCurrency } from '@/utils/helpers';
 import Spinner from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
+import { isLowStock } from '@/constants/inventory';
 
 export default function AdminInventory() {
   const [products, setProducts] = useState([]);
@@ -21,11 +22,14 @@ export default function AdminInventory() {
 
   const saveStock = async (id) => {
     try {
-      await adminService.updateStock(id, { stock: editing.stock });
+      const { error } = await adminService.updateStock(id, { stock: editing.stock });
+      if (error) throw error;
       toast.success('Stock updated');
       setEditing(null);
       fetchInventory();
-    } catch { toast.error('Update failed'); }
+    } catch (err) {
+      toast.error(err?.message || 'Update failed');
+    }
   };
 
   return (
@@ -71,7 +75,7 @@ export default function AdminInventory() {
                         <button onClick={() => setEditing(null)} className="text-xs text-slate-400 hover:text-white">✕</button>
                       </div>
                     ) : (
-                      <span className={p.stock <= 5 ? 'text-orange-400 font-bold' : 'text-slate-300'}>{p.stock}</span>
+                      <span className={isLowStock(p.stock) ? 'text-orange-400 font-bold' : 'text-slate-300'}>{p.stock}</span>
                     )}
                   </td>
                   <td className="p-4 text-right">

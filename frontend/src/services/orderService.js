@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { cartService } from '@/services/cartService';
 
 const ORDER_SELECT = `
   *,
@@ -54,12 +55,35 @@ export const mapOrder = (row) => {
 };
 
 /**
+ * Client-side pre-check before RPC (UX only; place_order remains authoritative).
+ */
+export const validateBeforeCheckout = async (userId) => {
+  return cartService.validateCartStock(userId);
+};
+
+/**
  * Place order via atomic RPC (validates stock, creates order/items, decrements stock, clears cart).
  */
 export const placeOrder = async (userId) => {
+  const validation = await validateBeforeCheckout(userId);
+  if (validation.error) throw validation.error;
+  if (!validation.valid) {
+    const message = validation.issues?.[0]?.error || 'Cart validation failed';
+    throw new Error(message);
+  }
+
   const { data, error } = await supabase.rpc('place_order', { p_user_id: userId });
   if (error) throw error;
   return { order: { id: data } };
+};
+
+/**
+ * Cancel order and restore stock via cancel_order RPC.
+ */
+export const cancelOrder = async (orderId) => {
+  const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId });
+  if (error) throw error;
+  return { success: true };
 };
 
 export const getOrder = async (orderId) => {
@@ -86,6 +110,8 @@ export const getMyOrders = async (userId) => {
 
 export const orderService = {
   placeOrder,
+  validateBeforeCheckout,
+  cancelOrder,
   getOrder,
   getMyOrders,
   mapOrder,

@@ -4,6 +4,7 @@ import { formatCurrency } from '@/utils/helpers';
 import Skeleton from '@/components/ui/Skeleton';
 import { FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
+import { isOutOfStock, isLowStock } from '@/constants/inventory';
 
 export default function Cart() {
   const { cart, loading, subtotal, addToCart, setQuantity, removeFromCart, getItemPrice, getItemImage } = useCart();
@@ -57,13 +58,21 @@ export default function Cart() {
                 const image = getItemImage(item);
                 const productLink = `/shop/${item.product_id}`;
                 const unitPrice = price;
+                const stock = product.stock ?? 0;
+                const inactive = product.is_active === false;
+                const atMax = Number(item.quantity) >= stock;
+                const overStock = Number(item.quantity) > stock;
+                const unavailable = inactive || isOutOfStock(stock);
 
-                const increment = () => addToCart({
-                  id: item.product_id,
-                  name: product.name,
-                  price: unitPrice,
-                  image_url: image,
-                }, 1);
+                const increment = () => {
+                  if (unavailable || atMax) return;
+                  addToCart({
+                    id: item.product_id,
+                    name: product.name,
+                    price: unitPrice,
+                    image_url: image,
+                  }, 1);
+                };
                 const decrement = () => setQuantity(item.id, Number(item.quantity || 0) - 1);
                 const handleRemove = () => removeFromCart(item.id);
 
@@ -78,6 +87,18 @@ export default function Cart() {
                         <Link to={productLink}>
                           <h3 className="font-display font-medium text-lg text-white line-clamp-2 hover:text-brand-400 transition-colors">{name}</h3>
                         </Link>
+                        {inactive && (
+                          <p className="text-xs text-red-400 mt-1">This item is no longer available</p>
+                        )}
+                        {!inactive && isOutOfStock(stock) && (
+                          <p className="text-xs text-red-400 mt-1">Out of stock — remove to continue</p>
+                        )}
+                        {!inactive && !isOutOfStock(stock) && isLowStock(stock) && (
+                          <p className="text-xs text-orange-400 mt-1">Only {stock} left in stock</p>
+                        )}
+                        {overStock && !isOutOfStock(stock) && (
+                          <p className="text-xs text-orange-400 mt-1">Quantity exceeds available stock ({stock})</p>
+                        )}
                       </div>
                       <button onClick={handleRemove} className="w-8 h-8 rounded-full bg-surface-card flex items-center justify-center text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0" aria-label="Remove item">
                         <FiTrash2 size={16} />
@@ -89,7 +110,7 @@ export default function Cart() {
                       <div className="bg-[#0A0A0A] border border-brand-500/20 p-1 rounded-lg flex items-center gap-2">
                         <button onClick={decrement} className="px-3 py-1 bg-surface-card rounded">-</button>
                         <div className="px-3">{item.quantity}</div>
-                        <button onClick={increment} className="px-3 py-1 bg-surface-card rounded">+</button>
+                        <button onClick={increment} disabled={unavailable || atMax} className="px-3 py-1 bg-surface-card rounded disabled:opacity-40">+</button>
                       </div>
                     </div>
                   </div>
