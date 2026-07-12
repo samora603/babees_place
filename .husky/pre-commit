@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Pre-commit hook — runs lint-staged against the frontend package.
+# The npm package lives in ./frontend while the git root is this directory,
+# so we cd into frontend before invoking lint-staged.
+cd "$(dirname "$0")/../frontend" && npx lint-staged

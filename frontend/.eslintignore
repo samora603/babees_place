@@ -1,0 +1,6 @@
+dist/
+node_modules/
+.agents/
+coverage/
+playwright-report/
+test-results/
