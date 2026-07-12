@@ -10,7 +10,7 @@ import { GiBee } from "react-icons/gi";
 import Button from "@/components/ui/Button";
 
 export default function Checkout() {
-  const { cart, clearCart, subtotal, reloadCart, getItemPrice, getItemImage, loading: cartLoading } = useCart();
+  const { cart, subtotal, reloadCart, getItemPrice, getItemImage, loading: cartLoading } = useCart();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
@@ -29,17 +29,12 @@ export default function Checkout() {
         return;
       }
 
-      let orderId;
-
-      try {
-        const { order } = await orderService.placeOrder(user.id);
-        orderId = order.id;
-      } catch (rpcError) {
-        console.warn("place_order RPC failed, using client fallback:", rpcError);
-        const { order } = await orderService.createOrderFromCart(user.id, cart);
-        orderId = order.id;
-        await clearCart();
-      }
+      // Orders are placed exclusively via the atomic `place_order` RPC, which
+      // recomputes totals from current product prices server-side. There is no
+      // client-side fallback: allowing the browser to insert orders/items
+      // directly would let a malicious client forge prices and totals.
+      const { order } = await orderService.placeOrder(user.id);
+      const orderId = order.id;
 
       await reloadCart();
       toast.success("Order placed successfully!");

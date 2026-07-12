@@ -61,73 +61,6 @@ export const placeOrder = async (userId) => {
   return { order: { id: data } };
 };
 
-/**
- * Fallback client-side order creation (used if RPC unavailable).
- */
-export const createOrderFromCart = async (userId, cartItems) => {
-  if (!userId || !cartItems?.length) {
-    throw new Error('Invalid order request');
-  }
-
-  const totalAmount = cartItems.reduce((sum, item) => {
-    const product = item.product || {};
-    const price = Number(product.discountPrice ?? product.price ?? 0);
-    return sum + price * Number(item.quantity || 1);
-  }, 0);
-
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      user_id: userId,
-      total_amount: totalAmount,
-      status: 'pending',
-      payment_status: 'pending',
-    })
-    .select()
-    .single();
-
-  if (orderError) throw orderError;
-
-  const orderItems = cartItems.map((item) => {
-    const product = item.product || {};
-    const price = Number(product.discountPrice ?? product.price ?? 0);
-    const image = product.image_url
-      || (Array.isArray(product.images) && product.images[0]?.url)
-      || null;
-
-    return {
-      order_id: order.id,
-      product_id: item.product_id,
-      name: product.name || 'Unknown',
-      price,
-      quantity: Number(item.quantity || 1),
-      image_url: image,
-    };
-  });
-
-  const { error: itemsError } = await supabase
-    .from('order_items')
-    .insert(orderItems);
-
-  if (itemsError) {
-    await supabase.from('orders').delete().eq('id', order.id);
-    throw itemsError;
-  }
-
-  for (const item of cartItems) {
-    const product = item.product;
-    if (!product?.id) continue;
-    const newStock = Number(product.stock ?? 0) - Number(item.quantity || 1);
-    if (newStock < 0) {
-      await supabase.from('orders').delete().eq('id', order.id);
-      throw new Error(`Insufficient stock for ${product.name}`);
-    }
-    await supabase.from('products').update({ stock: newStock }).eq('id', product.id);
-  }
-
-  return { order };
-};
-
 export const getOrder = async (orderId) => {
   const { data, error } = await supabase
     .from('orders')
@@ -152,7 +85,6 @@ export const getMyOrders = async (userId) => {
 
 export const orderService = {
   placeOrder,
-  createOrderFromCart,
   getOrder,
   getMyOrders,
   mapOrder,

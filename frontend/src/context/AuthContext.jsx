@@ -92,7 +92,13 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (payload) => {
     if (!user?.id) throw new Error("Not authenticated");
 
-    const { full_name, name, email, ...rest } = payload;
+    // Never allow privilege-related columns to be set from the client.
+    // Role changes must happen server-side (RLS WITH CHECK also enforces this).
+    const { full_name, name, email, role, is_admin, id, created_at, ...rest } = payload;
+    void role;
+    void is_admin;
+    void id;
+    void created_at;
     const update = { ...rest };
 
     if (full_name !== undefined || name !== undefined) {

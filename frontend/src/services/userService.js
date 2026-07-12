@@ -10,7 +10,11 @@ export const userService = {
         const user = userRes.user;
         if (!user) return { data: { data: null, error: 'Not authenticated' } };
 
-        const { full_name, name, email, ...rest } = payload;
+        // Strip privilege-related columns so a client cannot self-escalate.
+        const { full_name, name, email, role, is_admin, created_at, ...rest } = payload;
+        void role;
+        void is_admin;
+        void created_at;
         const update = { id: user.id, ...rest };
 
         if (full_name !== undefined || name !== undefined) {
