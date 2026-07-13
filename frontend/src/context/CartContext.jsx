@@ -16,36 +16,57 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const loadCart = useCallback(async () => {
+  const loadCartForUser = useCallback(async (userId) => {
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!userId) {
       setCart([]);
       setLoading(false);
       return;
     }
 
-    const { data } = await cartService.getCart(user.id);
+    const { data } = await cartService.getCart(userId);
     setCart(data.items || []);
-
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    loadCart();
+    let mounted = true;
+
+    const bootstrap = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!mounted) return;
+      await loadCartForUser(user?.id);
+    };
+
+    bootstrap();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
       if (!session?.user) {
         setCart([]);
         setLoading(false);
         return;
       }
-      loadCart();
+
+      const userId = session.user.id;
+      queueMicrotask(() => {
+        if (!mounted) return;
+        void loadCartForUser(userId);
+      });
     });
 
-    return () => subscription.unsubscribe();
-  }, [loadCart]);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadCartForUser]);
+
+  const loadCart = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    await loadCartForUser(user?.id);
+  }, [loadCartForUser]);
 
   const addToCart = async (product, quantity = 1) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -60,7 +81,7 @@ export const CartProvider = ({ children }) => {
     if (error) return toast.error(error.message || "Failed to add item");
 
     toast.success("Added to cart");
-    await loadCart();
+    await loadCartForUser(user.id);
   };
 
   const removeFromCart = async (cartId) => {

@@ -1,5 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import Spinner from '@/components/ui/Spinner';
 
 const ProtectedRoute = () => {
   const { user, loading } = useAuth();
@@ -7,7 +8,7 @@ const ProtectedRoute = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        <Spinner size="lg" />
       </div>
     );
   }

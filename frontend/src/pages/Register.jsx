@@ -1,48 +1,38 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/lib/supabaseClient";
-import toast from "react-hot-toast";
-import Button from "@/components/ui/Button";
-
-const normalizePhone = (phone) => {
-  if (!phone) return null;
-
-  let cleaned = phone.replace(/\s/g, "");
-
-  if (cleaned.startsWith("0")) {
-    cleaned = "+254" + cleaned.substring(1);
-  } else if (cleaned.startsWith("7")) {
-    cleaned = "+254" + cleaned;
-  }
-
-  return cleaned;
-};
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { normalizePhone } from '@/utils/helpers';
+import toast from 'react-hot-toast';
+import Button from '@/components/ui/Button';
 
 export default function Register() {
-  const navigate = useNavigate();
+  const { signup } = useAuth();
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    if (!fullName || !email || !phone || !password || !confirmPassword) {
-      toast.error("Please fill in all fields");
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+
+    if (!trimmedName || !trimmedEmail || !phone || !password || !confirmPassword) {
+      toast.error('Please fill in all fields');
       return;
     }
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error('Passwords do not match');
       return;
     }
 
@@ -51,30 +41,11 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone: formattedPhone,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      const user = data.user || data.session?.user;
-
-      if (!user) {
-        throw new Error("Signup failed. Check your email for confirmation.");
-      }
-
-      toast.success("Account created successfully!");
-      navigate("/login");
+      await signup(trimmedEmail, password, trimmedName, formattedPhone);
+      toast.success('Account created successfully!');
     } catch (err) {
-      console.error("REGISTER ERROR:", err);
-      toast.error(err.message || "Registration failed");
+      console.error('REGISTER ERROR:', err);
+      toast.error(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -83,19 +54,18 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface text-white px-4">
       <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-8">
-
         <h2 className="text-2xl font-bold mb-6 text-center">
           Create Account
         </h2>
 
         <form onSubmit={handleRegister} className="space-y-4">
-
           <input
             type="text"
             placeholder="Full Name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
+            required
           />
 
           <input
@@ -104,6 +74,8 @@ export default function Register() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
+            autoComplete="email"
+            required
           />
 
           <input
@@ -112,6 +84,7 @@ export default function Register() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
+            required
           />
 
           <input
@@ -120,6 +93,8 @@ export default function Register() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
+            autoComplete="new-password"
+            required
           />
 
           <input
@@ -128,15 +103,17 @@ export default function Register() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
+            autoComplete="new-password"
+            required
           />
 
-          <Button type="submit" loading={loading} className="w-full">
+          <Button type="submit" loading={loading} disabled={loading} className="w-full">
             Create Account
           </Button>
         </form>
 
         <p className="text-sm text-center mt-6 text-slate-400">
-          Already have an account?{" "}
+          Already have an account?{' '}
           <Link to="/login" className="text-brand-400">
             Login
           </Link>

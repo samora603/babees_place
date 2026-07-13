@@ -1,34 +1,33 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import toast from "react-hot-toast";
-import Button from "@/components/ui/Button";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
+import Button from '@/components/ui/Button';
 
 export default function Login() {
   const { login } = useAuth();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [formLoading, setFormLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      toast.error('Please fill in all fields');
       return;
     }
 
     setFormLoading(true);
 
     try {
-      await login(email, password);
-
-      toast.success("Welcome back!");
-      // ❌ NO navigation here (handled in AuthContext)
+      await login(trimmedEmail, password);
+      toast.success('Welcome back!');
     } catch (err) {
       console.error(err);
-      toast.error(err.message || "Login failed");
+      toast.error(err.message || 'Login failed');
     } finally {
       setFormLoading(false);
     }
@@ -43,24 +42,34 @@ export default function Login() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="text-sm text-slate-300">Email</label>
+            <label htmlFor="login-email" className="text-sm text-slate-300">
+              Email
+            </label>
             <input
+              id="login-email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full mt-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none"
               placeholder="you@example.com"
+              required
             />
           </div>
 
           <div>
-            <label className="text-sm text-slate-300">Password</label>
+            <label htmlFor="login-password" className="text-sm text-slate-300">
+              Password
+            </label>
             <input
+              id="login-password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full mt-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none"
               placeholder="••••••••"
+              required
             />
           </div>
 
@@ -75,7 +84,7 @@ export default function Login() {
         </form>
 
         <p className="text-sm text-center mt-6 text-slate-400">
-          Don’t have an account?{" "}
+          Don’t have an account?{' '}
           <Link to="/register" className="text-brand-400 hover:underline">
             Sign up
           </Link>

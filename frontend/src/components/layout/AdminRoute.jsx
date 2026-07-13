@@ -1,5 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth, isAdminRole } from '@/context/AuthContext';
+import Spinner from '@/components/ui/Spinner';
 
 const AdminRoute = () => {
   const { user, profile, loading } = useAuth();
@@ -7,7 +8,7 @@ const AdminRoute = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -17,10 +18,10 @@ const AdminRoute = () => {
   }
 
   if (!profile) {
-    return <Navigate to="/shop" replace />;
+    return <Navigate to="/shop" replace state={{ authNotice: 'Profile missing — admin access denied.' }} />;
   }
 
-  if (profile.role !== "admin") {
+  if (!isAdminRole(profile.role)) {
     return <Navigate to="/shop" replace />;
   }
 

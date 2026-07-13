@@ -1,35 +1,96 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
-} from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabaseClient";
+} from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabaseClient';
+import * as authService from '@/services/authService';
 
 const AuthContext = createContext(null);
+
+const AUTH_PAGES = ['/login', '/register'];
+
+export function isAdminRole(role) {
+  return role === 'admin';
+}
+
+export function resolvePostLoginPath(role) {
+  return isAdminRole(role) ? '/admin/dashboard' : '/shop';
+}
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
 
-  const fetchProfile = async (userId) => {
+  const manualAuthRef = useRef(false);
+  const profileRequestRef = useRef(0);
+
+  const fetchProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
       .maybeSingle();
 
     if (error) {
-      console.error("Profile fetch error:", error);
+      console.error('Profile fetch error:', error);
       return null;
     }
 
     return data;
-  };
+  }, []);
+
+  const ensureProfile = useCallback(async (authUser) => {
+    if (!authUser?.id) return null;
+
+    const existing = await fetchProfile(authUser.id);
+    if (existing) return existing;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.id,
+        email: authUser.email,
+        full_name: authUser.user_metadata?.full_name || '',
+        phone: authUser.user_metadata?.phone || '',
+        role: 'customer',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Profile bootstrap error:', error);
+      return null;
+    }
+
+    return data;
+  }, [fetchProfile]);
+
+  const applyAuthSession = useCallback(async (authUser) => {
+    if (!authUser) {
+      setUser(null);
+      setProfile(null);
+      return { user: null, profile: null };
+    }
+
+    const requestId = ++profileRequestRef.current;
+    const prof = await ensureProfile(authUser);
+
+    if (requestId !== profileRequestRef.current) {
+      return { user: authUser, profile: prof };
+    }
+
+    setUser(authUser);
+    setProfile(prof);
+    return { user: authUser, profile: prof };
+  }, [ensureProfile]);
 
   const refreshProfile = async () => {
     if (!user?.id) return null;
@@ -39,62 +100,74 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    setLoading(true);
+    manualAuthRef.current = true;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await authService.signInWithPassword(email, password);
+      if (error) throw error;
 
-    if (error) {
-      setLoading(false);
-      throw error;
+      const authUser = data?.user;
+      if (!authUser) {
+        throw new Error('Login succeeded but no user was returned.');
+      }
+
+      const result = await applyAuthSession(authUser);
+      if (!result.profile) {
+        throw new Error(
+          'Signed in, but your profile could not be loaded. Contact support or try again.',
+        );
+      }
+
+      return data;
+    } finally {
+      manualAuthRef.current = false;
     }
-
-    const authUser = data?.user;
-
-    if (authUser) {
-      const prof = await fetchProfile(authUser.id);
-
-      setUser(authUser);
-      setProfile(prof);
-    }
-
-    setLoading(false);
-
-    return data;
   };
 
   const signup = async (email, password, fullName, phone = null) => {
-    setLoading(true);
+    manualAuthRef.current = true;
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone: phone || "",
-        },
-      },
-    });
+    try {
+      const { data, error } = await authService.signUp(email, password, {
+        fullName,
+        phone: phone || '',
+      });
 
-    if (error) {
-      setLoading(false);
-      throw error;
+      if (error) throw error;
+
+      const authUser = data?.user;
+      if (!authUser) {
+        throw new Error('Signup failed. Check your email for confirmation.');
+      }
+
+      if (data.session?.user) {
+        const result = await applyAuthSession(data.session.user);
+        if (!result.profile) {
+          throw new Error(
+            'Account created, but your profile could not be loaded. Try signing in.',
+          );
+        }
+      }
+
+      return authUser;
+    } finally {
+      manualAuthRef.current = false;
     }
-
-    setLoading(false);
-
-    return data?.user;
   };
 
   const updateProfile = async (payload) => {
-    if (!user?.id) throw new Error("Not authenticated");
+    if (!user?.id) throw new Error('Not authenticated');
 
-    // Never allow privilege-related columns to be set from the client.
-    // Role changes must happen server-side (RLS WITH CHECK also enforces this).
-    const { full_name, name, email, role, is_admin, id, created_at, ...rest } = payload;
+    const {
+      full_name,
+      name,
+      email,
+      role,
+      is_admin,
+      id,
+      created_at,
+      ...rest
+    } = payload;
     void role;
     void is_admin;
     void id;
@@ -109,9 +182,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     const { data, error } = await supabase
-      .from("profiles")
+      .from('profiles')
       .update(update)
-      .eq("id", user.id)
+      .eq('id', user.id)
       .select()
       .single();
 
@@ -122,102 +195,89 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-
+    await authService.signOut();
     setUser(null);
     setProfile(null);
-
-    navigate("/login", { replace: true });
+    navigate('/login', { replace: true });
   };
 
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
-      setLoading(true);
+    const bootstrap = async () => {
+      try {
+        const { data } = await authService.getSession();
+        if (!mounted) return;
 
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session;
-
-      if (!mounted) return;
-
-      if (!session?.user) {
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-        return;
+        if (data?.session?.user) {
+          await applyAuthSession(data.session.user);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      } finally {
+        if (mounted) setInitializing(false);
       }
-
-      const authUser = session.user;
-      const prof = await fetchProfile(authUser.id);
-
-      if (!mounted) return;
-
-      setUser(authUser);
-      setProfile(prof);
-      setLoading(false);
     };
 
-    initAuth();
+    bootstrap();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = authService.onAuthStateChange((event, session) => {
       if (!mounted) return;
 
-      if (!session?.user) {
+      if (event === 'SIGNED_OUT' || !session?.user) {
         setUser(null);
         setProfile(null);
-        setLoading(false);
         return;
       }
 
-      const authUser = session.user;
-      const prof = await fetchProfile(authUser.id);
+      if (manualAuthRef.current) {
+        return;
+      }
 
-      if (!mounted) return;
+      if (event === 'TOKEN_REFRESHED') {
+        setUser(session.user);
+        return;
+      }
 
-      setUser(authUser);
-      setProfile(prof);
-      setLoading(false);
+      if (event === 'SIGNED_IN') {
+        queueMicrotask(() => {
+          if (!mounted || manualAuthRef.current) return;
+          void applyAuthSession(session.user);
+        });
+      }
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [applyAuthSession]);
 
-  // Redirect only after login/register — allow cart, checkout, orders, profile
   useEffect(() => {
-    if (loading) return;
-    if (!user || !profile) return;
+    if (initializing || !user) return;
 
     const path = window.location.pathname;
-    const authPages = ["/login", "/register"];
+    if (!AUTH_PAGES.includes(path)) return;
 
-    if (!authPages.includes(path)) return;
-
-    if (profile.role === "admin") {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      navigate("/shop", { replace: true });
-    }
-  }, [user, profile, loading, navigate]);
+    navigate(resolvePostLoginPath(profile?.role), { replace: true });
+  }, [user, profile, initializing, navigate]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         profile,
-        loading,
+        loading: initializing,
         login,
         signup,
         logout,
         refreshProfile,
         updateProfile,
         isAuthenticated: !!user,
-        isAdmin: profile?.role === "admin",
+        isAdmin: isAdminRole(profile?.role),
       }}
     >
       {children}
