@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { validateCheckoutForm } from '@/utils/orderValidation';
+import { validateCheckoutForm, buildDeliveryAddressPayload } from '@/utils/orderValidation';
 import { getAllowedNextStatuses, canCustomerCancel, canAdminCancel } from '@/utils/orderStatus';
+import {
+  addressToCheckoutDelivery,
+  validateAddressInput,
+  getDefaultAddress,
+} from '@/models/address';
 
 describe('checkout fulfillment flow', () => {
   it('pickup flow requires location', () => {
@@ -16,6 +21,56 @@ describe('checkout fulfillment flow', () => {
       deliveryAddress: { line1: '', city: '', phone: '' },
     });
     expect(invalid.valid).toBe(false);
+  });
+
+  it('saved address maps to checkout delivery payload', () => {
+    const saved = {
+      streetAddress: '10 Lane',
+      county: 'Nairobi',
+      town: 'Karen',
+      phone: '+254712345678',
+      recipientName: 'Sam',
+      additionalDirections: 'Blue gate',
+    };
+    const delivery = addressToCheckoutDelivery(saved);
+    const validation = validateCheckoutForm({
+      deliveryType: 'delivery',
+      deliveryAddress: delivery,
+    });
+    expect(validation.valid).toBe(true);
+    expect(buildDeliveryAddressPayload(delivery)).toEqual(delivery);
+  });
+
+  it('new address form validates before checkout', () => {
+    const invalid = validateAddressInput({
+      label: 'home',
+      recipientName: '',
+      phone: 'bad',
+      county: '',
+      town: '',
+      streetAddress: '',
+    });
+    expect(invalid.valid).toBe(false);
+
+    const valid = validateAddressInput({
+      label: 'home',
+      recipientName: 'Sam',
+      phone: '+254712345678',
+      county: 'Nairobi',
+      town: 'Westlands',
+      streetAddress: '1 St',
+    });
+    expect(valid.valid).toBe(true);
+  });
+
+  it('getDefaultAddress selects default for checkout bootstrap', () => {
+    const addresses = [
+      { id: 'a', isDefault: false, streetAddress: 'A' },
+      { id: 'b', isDefault: true, streetAddress: 'B' },
+    ];
+    const selected = getDefaultAddress(addresses);
+    expect(selected.id).toBe('b');
+    expect(addressToCheckoutDelivery(selected).line1).toBe('B');
   });
 
   it('pickup order status path after confirmed', () => {

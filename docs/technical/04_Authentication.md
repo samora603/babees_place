@@ -49,7 +49,18 @@ signUp/signIn (AuthContext)
 - No forgot-password flow implemented.
 - Dead OTP code (`OtpInput`, `authService`).
 
-## 6. Conventions (target)
+## 6. Customer profile data (Phase 2 WS5 — Milestone 5.1)
+
+Beyond `profiles` (identity), customers own:
+
+| Table | Access | Notes |
+|---|---|---|
+| `customer_addresses` | RLS: `user_id = auth.uid()` | Multi-address book; one default per user |
+| `customer_preferences` | RLS: `user_id = auth.uid()` | One row per user; fulfillment + future notification flags |
+
+Frontend services: `addressService`, `customerProfileService`. No service-role key in the browser.
+
+## 7. Conventions (target)
 - All privileged mutations validated in-database (RLS / SECURITY DEFINER RPC).
 - Never trust frontend role checks alone.
 - Role changes should only occur through an admin-only, server-validated path.

@@ -15,11 +15,12 @@ Source of truth: `frontend/` (verified: `npm run build` succeeds).
 src/
 ├── main.jsx                # providers: Auth → Cart → Wishlist → App (BrowserRouter)
 ├── App.jsx                 # routes (lazy-loaded)
-├── components/{ui,layout,products,orders,auth}
+├── components/{ui,layout,products,orders,checkout,profile,auth}
 ├── pages/                  # public pages
 │   └── admin/              # admin pages
 ├── context/{Auth,Cart,Wishlist}Context.jsx
 ├── hooks/                  # useDebounce, usePagination, useProducts (+ dead: useAuth/useCart/useWishlist)
+├── models/                 # domain mappers + validation (address, preferences, analytics, …)
 ├── services/               # Supabase data access
 ├── lib/                    # supabaseClient (+ re-export supabase.js; dead auth.js)
 └── utils/{constants,helpers}.js
@@ -56,4 +57,30 @@ src/
 - Lint: ❌ `npm run lint` fails — no ESLint config file exists (and it lints `dist/`).
 - Tests: ❌ none.
 
-## 8. Known issues → see `docs/audits/FRONTEND_AUDIT.md` and `Frontend_Health_Report.md`.
+## 8. Customer profile (Phase 2 WS5 — Milestone 5.1)
+
+### Profile page (`/profile`)
+Three reusable sections via `components/profile/`:
+- **Personal Information** — `PersonalInfoForm` (name, phone; email read-only from auth).
+- **Address Book** — `AddressBook` + `AddressForm` (CRUD, default badge, delete confirmation modal).
+- **Account Preferences** — `AccountPreferencesForm` (fulfillment default, pickup location, marketing/SMS flags — storage only).
+
+Data loaded via `customerProfileService.getProfileBundle()` (parallel addresses + preferences).
+
+### Checkout address integration
+`CheckoutDeliverySection` supports three delivery modes when the customer has saved addresses:
+1. **saved** — pick from address book; maps via `addressToCheckoutDelivery()` to existing order JSONB.
+2. **new** — full address form with optional “Save to my account”.
+3. **once** — legacy inline fields (line1/line2/city/phone/notes) without persisting.
+
+Checkout bootstrap applies preference defaults (`preferredFulfillment`, `preferredPickupLocationId`).
+
+### Services
+| Service | Tables |
+|---|---|
+| `addressService.js` | `customer_addresses` |
+| `customerProfileService.js` | `customer_preferences` (+ bundle with addresses) |
+
+Business logic and validation live in `models/address.js` and `models/preferences.js`.
+
+## 9. Known issues → see `docs/audits/FRONTEND_AUDIT.md` and `Frontend_Health_Report.md`.

@@ -94,3 +94,14 @@ Forward migrations `002`–`010` are **authored and validated**; the following s
    (see `Phase1_6_Execution_Readiness.md`).
 4. Apply on staging first, run the post-apply `VALIDATE CONSTRAINT` steps and smoke tests,
    then push to production per the Runbook order.
+
+---
+
+## Phase 2 forward migrations (authored)
+
+| Order | File | Purpose | Applied on live? |
+|---|---|---|---|
+| 11 | `011_product_management.sql` | Product admin enhancements | No |
+| 12 | `012_inventory.sql` | Inventory tracking | No |
+| 13 | `013_order_fulfillment.sql` | Pickup locations, delivery JSONB, order events | No |
+| 14 | `014_customer_profile.sql` | Saved addresses + account preferences (WS5 M5.1) | No |
