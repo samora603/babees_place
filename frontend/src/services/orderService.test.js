@@ -14,6 +14,7 @@ vi.mock('@/lib/supabaseClient', () => ({
 vi.mock('@/services/cartService', () => ({
   cartService: {
     validateCartStock: vi.fn().mockResolvedValue({ valid: true, issues: [], error: null }),
+    addToCart: vi.fn(),
   },
 }));
 
@@ -21,6 +22,7 @@ describe('orderService', () => {
   beforeEach(() => {
     rpcMock.mockReset();
     fromMock.mockReset();
+    vi.clearAllMocks();
   });
 
   it('cancelOrder calls cancel_order RPC', async () => {
@@ -92,5 +94,44 @@ describe('orderService', () => {
     const { data } = await getActivePickupLocations();
     expect(data[0].name).toBe('Hub');
     expect(fromMock).toHaveBeenCalledWith('pickup_locations');
+  });
+
+  it('reorder adds available items and reports skipped ones', async () => {
+    const { cartService } = await import('@/services/cartService');
+    cartService.addToCart.mockResolvedValue({ error: null });
+
+    const orderRow = {
+      id: 'order-1',
+      status: 'delivered',
+      total: 500,
+      user_id: 'user-1',
+      order_items: [
+        { id: 'oi-1', product_id: 'p1', name: 'Honey', price: 500, quantity: 2 },
+        { id: 'oi-2', product_id: null, name: 'Old item', price: 100, quantity: 1 },
+      ],
+      pickup_locations: null,
+    };
+
+    fromMock.mockImplementation((table) => {
+      if (table === 'profiles') {
+        const chain = makeQuery({
+          data: [{ id: 'user-1', full_name: 'Sam', email: 's@x.com', phone: null }],
+          error: null,
+        });
+        chain.in = () => chain;
+        return chain;
+      }
+      const orderChain = makeQuery({ data: orderRow, error: null });
+      orderChain.eq = () => orderChain;
+      orderChain.maybeSingle = () => orderChain;
+      return orderChain;
+    });
+
+    const { reorder } = await import('./orderService');
+    const result = await reorder('order-1', 'user-1');
+
+    expect(result.added).toHaveLength(1);
+    expect(result.skipped).toHaveLength(1);
+    expect(cartService.addToCart).toHaveBeenCalledWith('user-1', 'p1', 2);
   });
 });

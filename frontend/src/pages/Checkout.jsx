@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { orderService } from "@/services/orderService";
+import { checkoutService } from "@/services/checkoutService";
 import { addressService } from "@/services/addressService";
-import { customerProfileService } from "@/services/customerProfileService";
 import { formatCurrency } from "@/utils/helpers";
 import { DELIVERY_TYPES } from "@/utils/constants";
 import { DELIVERY_FEE } from "@/utils/orderStatus";
@@ -17,6 +17,7 @@ import {
   EMPTY_ADDRESS_FORM,
 } from "@/models/address";
 import CheckoutDeliverySection, { emptyCheckoutAddress } from "@/components/checkout/CheckoutDeliverySection";
+import ExpressCheckoutPanel from "@/components/checkout/ExpressCheckoutPanel";
 import toast from "react-hot-toast";
 import { GiBee } from "react-icons/gi";
 import Button from "@/components/ui/Button";
@@ -35,6 +36,7 @@ export default function Checkout() {
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [newAddressForm, setNewAddressForm] = useState({ ...EMPTY_ADDRESS_FORM });
   const [saveNewAddress, setSaveNewAddress] = useState(true);
+  const [checkoutPreferences, setCheckoutPreferences] = useState(null);
   const [form, setForm] = useState({
     deliveryType: "pickup",
     pickupLocationId: "",
@@ -45,14 +47,11 @@ export default function Checkout() {
   const bootstrapCheckout = useCallback(async () => {
     setLoadingLocations(true);
     try {
-      const [locationsResult, bundleResult] = await Promise.all([
-        orderService.getActivePickupLocations(),
-        customerProfileService.getProfileBundle(),
-      ]);
-      setPickupLocations(locationsResult.data || []);
-      const addresses = bundleResult.data?.addresses || [];
-      const preferences = bundleResult.data?.preferences;
+      const { pickupLocations: locations, addresses, preferences } =
+        await checkoutService.getCheckoutBootstrap();
+      setPickupLocations(locations);
       setSavedAddresses(addresses);
+      setCheckoutPreferences(preferences);
 
       const defaultAddr = getDefaultAddress(addresses);
       const preferredType = preferences?.preferredFulfillment || "pickup";
@@ -97,6 +96,16 @@ export default function Checkout() {
       || Number(item.quantity) > (p.stock ?? 0);
   });
 
+  const expressStatus = useMemo(
+    () => checkoutService.getExpressCheckoutStatus({
+      preferences: checkoutPreferences,
+      addresses: savedAddresses,
+      pickupLocations,
+      cartValid: cart.length > 0 && !cartBlocked,
+    }),
+    [checkoutPreferences, savedAddresses, pickupLocations, cart.length, cartBlocked],
+  );
+
   const deliveryFee = form.deliveryType === "delivery" ? DELIVERY_FEE : 0;
   const total = subtotal + deliveryFee;
 
@@ -131,6 +140,33 @@ export default function Checkout() {
       });
     }
     return form.deliveryAddress;
+  };
+
+  const handleExpressCheckout = async () => {
+    if (!expressStatus.eligible || cartBlocked) return;
+
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login first");
+        return;
+      }
+
+      const { order } = await checkoutService.placeExpressOrder(
+        user.id,
+        expressStatus,
+        form.customerNote,
+      );
+      await reloadCart();
+      toast.success("Order placed successfully!");
+      navigate(`/orders/${order.id}/confirmation`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Express checkout failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCheckout = async () => {
@@ -234,6 +270,17 @@ export default function Checkout() {
         {cartBlocked && (
           <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
             Some items in your cart are unavailable or exceed stock. <Link to="/cart" className="underline">Return to cart</Link> to fix.
+          </div>
+        )}
+
+        {expressStatus.eligible && !cartBlocked && (
+          <div className="mb-8">
+            <ExpressCheckoutPanel
+              summary={expressStatus.summary}
+              totalLabel={formatCurrency(total)}
+              onExpressCheckout={handleExpressCheckout}
+              disabled={submitting || cartBlocked}
+            />
           </div>
         )}
 

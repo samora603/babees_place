@@ -41,8 +41,12 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await signup(trimmedEmail, password, trimmedName, formattedPhone);
-      toast.success('Account created successfully!');
+      const result = await signup(trimmedEmail, password, trimmedName, formattedPhone);
+      if (result?.session) {
+        toast.success('Account created successfully!');
+      } else {
+        toast.success('Account created! Check your email to confirm, then sign in.');
+      }
     } catch (err) {
       console.error('REGISTER ERROR:', err);
       toast.error(err.message || 'Registration failed');

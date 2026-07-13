@@ -130,6 +130,8 @@ Models: `models/address.js`, `models/preferences.js` — validation, mapping, ch
 
 6. **Notification flags stored only** — `marketing_emails` and `sms_notifications` persisted for future milestones; no delivery system in 5.1.
 
+7. **Next milestone** — Milestone 5.2 (Faster Checkout) implemented; see `docs/audits/Phase2_WS5_Milestone5.2_Report.md`.
+
 ---
 
 ## Testing summary

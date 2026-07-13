@@ -83,4 +83,19 @@ Checkout bootstrap applies preference defaults (`preferredFulfillment`, `preferr
 
 Business logic and validation live in `models/address.js` and `models/preferences.js`.
 
+### Faster checkout (Phase 2 WS5 — Milestone 5.2)
+
+Returning customers with saved preferences may use **express checkout**:
+
+| Component / Service | Role |
+|---|---|
+| `models/fasterCheckout.js` | Eligibility rules, express fulfillment builder, reorder summaries |
+| `checkoutService.js` | Bootstrap data, express order placement |
+| `orderService.reorder()` | Add prior order items to cart (merge, skip unavailable) |
+| `ExpressCheckoutPanel` | One-click checkout on `/checkout` |
+| `CartExpressHint` | Sidebar banner when express is available |
+| `ReorderButton` | Order detail action → cart |
+
+Express requires valid cart + configured preferences (pickup location or default delivery address). Standard checkout from 5.1 remains available below the express panel.
+
 ## 9. Known issues → see `docs/audits/FRONTEND_AUDIT.md` and `Frontend_Health_Report.md`.

@@ -5,25 +5,48 @@ import { orderService } from '@/services/orderService';
 import { formatCurrency, formatDate } from '@/utils/helpers';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import Spinner from '@/components/ui/Spinner';
+import Button from '@/components/ui/Button';
 
 export default function Orders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const loadOrders = () => {
     if (!user?.id) return;
-
+    setLoading(true);
+    setError(null);
     orderService
       .getMyOrders(user.id)
-      .then(({ data }) => setOrders(data.data || []))
+      .then(({ data }) => setOrders(data?.data || []))
+      .catch((err) => {
+        console.error('Orders load error:', err);
+        setError(err);
+        setOrders([]);
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="section-container py-20 text-center space-y-4">
+        <p className="text-red-400">Could not load your orders.</p>
+        <p className="text-sm text-slate-500">{error.message}</p>
+        <Button variant="secondary" onClick={loadOrders}>Retry</Button>
       </div>
     );
   }

@@ -10,23 +10,75 @@ export default function OrderConfirmation() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    orderService.getOrder(id)
-      .then(({ data }) => setOrder(data.data))
-      .finally(() => setLoading(false));
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+
+    orderService
+      .getOrder(id)
+      .then(({ data }) => {
+        if (!mounted) return;
+        setOrder(data?.data || null);
+      })
+      .catch((err) => {
+        console.error('OrderConfirmation load error:', err);
+        if (!mounted) return;
+        setError(err);
+        setOrder(null);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner size="lg" /></div>;
-  if (!order) return <div className="section-container py-20 text-center text-slate-400">Order not found.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="section-container py-20 text-center space-y-4">
+        <p className="text-red-400">Could not load your order confirmation.</p>
+        <p className="text-sm text-slate-500">{error.message || 'Please try again from My Orders.'}</p>
+        <div className="flex gap-3 justify-center">
+          <Link to="/orders" className="btn-secondary">My Orders</Link>
+          <Link to="/shop" className="btn-primary">Continue Shopping</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="section-container py-20 text-center space-y-4">
+        <p className="text-slate-400">Order not found.</p>
+        <Link to="/orders" className="btn-secondary inline-block">My Orders</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="section-container py-16 max-w-2xl">
       <div className="text-center mb-10">
         <FiCheckCircle size={56} className="text-green-400 mx-auto mb-4" />
         <h1 className="font-display font-bold text-3xl text-white">Order Confirmed!</h1>
-        <p className="text-slate-400 mt-2">Order <strong className="text-slate-200">{order.orderNumber}</strong> has been placed.</p>
-        {order.mpesaReceiptNumber && <p className="text-xs text-slate-500 mt-1">M-Pesa receipt: {order.mpesaReceiptNumber}</p>}
+        <p className="text-slate-400 mt-2">
+          Order <strong className="text-slate-200">{order.orderNumber}</strong> has been placed.
+        </p>
+        {order.mpesaReceiptNumber && (
+          <p className="text-xs text-slate-500 mt-1">M-Pesa receipt: {order.mpesaReceiptNumber}</p>
+        )}
       </div>
 
       <div className="card p-6 space-y-4">
@@ -37,12 +89,18 @@ export default function OrderConfirmation() {
         <div className="divide-y divide-surface-border">
           {order.items.map((item) => (
             <div key={item.id} className="py-3 flex gap-3">
-              <img src={item.image || '/placeholder.png'} alt={item.name} className="w-12 h-12 object-cover rounded-lg" />
+              <img
+                src={item.image || '/placeholder.png'}
+                alt={item.name}
+                className="w-12 h-12 object-cover rounded-lg"
+              />
               <div className="flex-1">
                 <p className="text-sm font-medium">{item.name}</p>
                 <p className="text-xs text-slate-400">Qty: {item.quantity}</p>
               </div>
-              <p className="text-sm font-semibold text-brand-400">{formatCurrency(item.price * item.quantity)}</p>
+              <p className="text-sm font-semibold text-brand-400">
+                {formatCurrency(item.price * item.quantity)}
+              </p>
             </div>
           ))}
         </div>
@@ -52,10 +110,16 @@ export default function OrderConfirmation() {
         </div>
       </div>
 
-      <div className="flex gap-4 mt-8">
-        <Link to={`/orders/${order.id}`} className="btn-secondary flex-1 text-center">View Order Details</Link>
-        <Link to="/orders" className="btn-secondary flex-1 text-center">All Orders</Link>
-        <Link to="/shop" className="btn-primary flex-1 text-center">Continue Shopping</Link>
+      <div className="flex gap-4 mt-8 flex-wrap">
+        <Link to={`/orders/${order.id}`} className="btn-secondary flex-1 text-center min-w-[8rem]">
+          View Order Details
+        </Link>
+        <Link to="/orders" className="btn-secondary flex-1 text-center min-w-[8rem]">
+          All Orders
+        </Link>
+        <Link to="/shop" className="btn-primary flex-1 text-center min-w-[8rem]">
+          Continue Shopping
+        </Link>
       </div>
     </div>
   );

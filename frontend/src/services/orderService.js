@@ -1,11 +1,16 @@
 import { supabase } from '@/lib/supabaseClient';
 import { cartService } from '@/services/cartService';
 import { canCustomerCancel } from '@/utils/orderStatus';
+import { attachProfilesToOrders } from '@/services/profileLookup';
 
+/**
+ * Order select without `profiles` embed.
+ * orders.user_id references auth.users, not profiles — embedding profiles
+ * causes PostgREST PGRST200 and breaks every order read path.
+ */
 const ORDER_SELECT = `
   *,
   order_items (*),
-  profiles (full_name, email, phone),
   pickup_locations (id, name, building, description, operating_hours)
 `;
 
@@ -106,7 +111,8 @@ export const getOrder = async (orderId) => {
     .maybeSingle();
 
   if (error) throw error;
-  return { data: { data: mapOrder(data) } };
+  const enriched = await attachProfilesToOrders(data);
+  return { data: { data: mapOrder(enriched) } };
 };
 
 export const getMyOrders = async (userId) => {
@@ -117,7 +123,8 @@ export const getMyOrders = async (userId) => {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return { data: { data: (data || []).map(mapOrder) } };
+  const enriched = await attachProfilesToOrders(data || []);
+  return { data: { data: enriched.map(mapOrder) } };
 };
 
 export const getActivePickupLocations = async () => {
@@ -150,6 +157,47 @@ export const getOrderEvents = async (orderId) => {
   return { data: data || [] };
 };
 
+/**
+ * Add all items from a prior order to the customer's cart (merge quantities).
+ * @param {string} orderId
+ * @param {string} userId
+ * @returns {Promise<{ added: object[], skipped: Array<{ item: object, reason: string }> }>}
+ */
+export const reorder = async (orderId, userId) => {
+  const { data } = await getOrder(orderId);
+
+  const order = data?.data;
+  if (!order) throw new Error('Order not found');
+
+  const items = order.items || [];
+  const added = [];
+  const skipped = [];
+
+  for (const item of items) {
+    if (!item.product_id) {
+      skipped.push({ item, reason: 'Product no longer available' });
+      continue;
+    }
+
+    const { error: addError } = await cartService.addToCart(
+      userId,
+      item.product_id,
+      Number(item.quantity) || 1,
+    );
+
+    if (addError) {
+      skipped.push({
+        item,
+        reason: addError.message || 'Could not add to cart',
+      });
+    } else {
+      added.push(item);
+    }
+  }
+
+  return { added, skipped };
+};
+
 export const canCancelOrder = (status, isAdmin = false) => {
   if (isAdmin) return status && status !== 'delivered' && status !== 'cancelled';
   return canCustomerCancel(status);
@@ -164,5 +212,6 @@ export const orderService = {
   getActivePickupLocations,
   getOrderEvents,
   canCancelOrder,
+  reorder,
   mapOrder,
 };

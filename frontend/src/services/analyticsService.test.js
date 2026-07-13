@@ -31,6 +31,8 @@ function mockQueryChain(result) {
     order: vi.fn(() => chain),
     limit: vi.fn(() => chain),
     lt: vi.fn(() => chain),
+    in: vi.fn(() => chain),
+    eq: vi.fn(() => chain),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   };
   return chain;
@@ -89,11 +91,17 @@ describe('analyticsService', () => {
       payment_status: 'paid',
       delivery_type: 'delivery',
       created_at: '2026-07-13T09:00:00.000Z',
-      profiles: { full_name: 'Alex' },
+      user_id: 'user-1',
     };
-    fromMock.mockReturnValue(
-      mockQueryChain({ data: [orderRow], error: null }),
-    );
+    fromMock.mockImplementation((table) => {
+      if (table === 'profiles') {
+        return mockQueryChain({
+          data: [{ id: 'user-1', full_name: 'Alex', email: 'a@b.c', phone: null }],
+          error: null,
+        });
+      }
+      return mockQueryChain({ data: [orderRow], error: null });
+    });
 
     const { analyticsService } = await import('./analyticsService');
     const { data, error } = await analyticsService.getRecentOrders(10);
@@ -130,19 +138,25 @@ describe('analyticsService', () => {
   });
 
   it('getDashboardActivity maps order_events', async () => {
-    fromMock.mockReturnValue(
-      mockQueryChain({
+    fromMock.mockImplementation((table) => {
+      if (table === 'profiles') {
+        return mockQueryChain({
+          data: [{ id: 'user-1', full_name: 'Pat', email: null, phone: null }],
+          error: null,
+        });
+      }
+      return mockQueryChain({
         data: [{
           id: 'e1',
           order_id: 'o1',
           event_type: 'order_placed',
           payload: {},
           created_at: '2026-07-13T09:00:00.000Z',
-          orders: { id: 'o1', profiles: { full_name: 'Pat' } },
+          orders: { id: 'o1', user_id: 'user-1' },
         }],
         error: null,
-      }),
-    );
+      });
+    });
 
     const { analyticsService } = await import('./analyticsService');
     const { data, error } = await analyticsService.getDashboardActivity(15);

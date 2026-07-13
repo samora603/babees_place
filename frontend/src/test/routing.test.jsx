@@ -40,8 +40,7 @@ describe('application smoke test', () => {
 
   it('renders the register page (auth entry point)', async () => {
     renderAt('/register');
-    // Register page has its own heading; a submit button is a stable anchor.
-    expect(await screen.findByRole('button')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /create account/i })).toBeInTheDocument();
   });
 
   it('renders the 404 page for an unknown route', async () => {

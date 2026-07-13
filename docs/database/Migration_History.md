@@ -105,3 +105,5 @@ Forward migrations `002`–`010` are **authored and validated**; the following s
 | 12 | `012_inventory.sql` | Inventory tracking | No |
 | 13 | `013_order_fulfillment.sql` | Pickup locations, delivery JSONB, order events | No |
 | 14 | `014_customer_profile.sql` | Saved addresses + account preferences (WS5 M5.1) | No |
+
+> **WS5 Milestone 5.2 (Faster Checkout)** — no new migration; uses `014` profile tables plus existing cart/order schema.

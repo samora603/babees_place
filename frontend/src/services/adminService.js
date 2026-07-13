@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import { LOW_STOCK_THRESHOLD } from '@/constants/inventory';
+import { attachProfilesToOrders } from '@/services/profileLookup';
 
 async function deleteProductStorage(productId) {
     try {
@@ -40,8 +41,7 @@ export const adminService = {
             delivery_type,
             created_at,
             user_id,
-            note,
-            profiles (full_name, email, phone)
+            note
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -57,9 +57,11 @@ export const adminService = {
         return { data: { data: [], total: 0 } };
     }
 
+    const enriched = await attachProfilesToOrders(data || []);
+
     return {
         data: {
-            data: data || [],
+            data: enriched,
             total: count || 0
         }
     };
@@ -112,13 +114,14 @@ export const adminService = {
             .select(`
                 *,
                 order_items (*),
-                profiles (full_name, email, phone),
                 pickup_locations (id, name, building, description, operating_hours)
             `)
             .eq('id', id)
             .maybeSingle();
 
-        return { data: { data, error } };
+        if (error) return { data: { data: null, error } };
+        const enriched = await attachProfilesToOrders(data);
+        return { data: { data: enriched, error: null } };
     },
 
     getUsers: async (params = {}) => {
@@ -126,7 +129,14 @@ export const adminService = {
         const page = params.page || 1;
         const from = (page - 1) * limit;
         const to = from + limit - 1;
-        const { data, count } = await supabase.from('profiles').select('*', { count: 'exact' }).range(from, to);
+        let query = supabase.from('profiles').select('*', { count: 'exact' }).range(from, to);
+        if (params.search?.trim()) {
+            const q = params.search.trim().replace(/[%_,]/g, '');
+            if (q) {
+                query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%`);
+            }
+        }
+        const { data, count } = await query;
         return { data: { data: data || [], total: count || 0 } };
     },
 

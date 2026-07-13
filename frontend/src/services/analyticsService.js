@@ -19,6 +19,7 @@ import {
   aggregateTopCategories,
 } from '@/models/analytics';
 import { fetchOrdersForAnalytics, fetchOrderItemsForAnalytics } from '@/services/analyticsQueries';
+import { attachProfilesToOrders, attachProfilesToOrderEvents } from '@/services/profileLookup';
 
 /**
  * Fetch core dashboard KPIs (counts + total revenue).
@@ -73,14 +74,15 @@ export async function getRecentOrders(limit = 10) {
         payment_status,
         delivery_type,
         created_at,
-        profiles (full_name)
+        user_id
       `)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
 
-    return { data: (data || []).map(mapRecentOrderRow), error: null };
+    const enriched = await attachProfilesToOrders(data || []);
+    return { data: enriched.map(mapRecentOrderRow), error: null };
   } catch (error) {
     console.error('analyticsService.getRecentOrders error:', error);
     return { data: [], error };
@@ -125,7 +127,7 @@ export async function getDashboardActivity(limit = 15) {
         order_id,
         orders (
           id,
-          profiles (full_name)
+          user_id
         )
       `)
       .order('created_at', { ascending: false })
@@ -133,7 +135,8 @@ export async function getDashboardActivity(limit = 15) {
 
     if (error) throw error;
 
-    return { data: (data || []).map(mapActivityEventRow), error: null };
+    const enriched = await attachProfilesToOrderEvents(data || []);
+    return { data: enriched.map(mapActivityEventRow), error: null };
   } catch (error) {
     console.error('analyticsService.getDashboardActivity error:', error);
     return { data: [], error };

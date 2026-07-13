@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { cartService } from "@/services/cartService";
 import { supabase } from "@/lib/supabaseClient";
@@ -15,18 +15,37 @@ const getItemPrice = (item) => {
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const loadSeqRef = useRef(0);
 
-  const loadCartForUser = useCallback(async (userId) => {
-    setLoading(true);
+  const loadCartForUser = useCallback(async (userId, { showLoading = true } = {}) => {
+    const seq = ++loadSeqRef.current;
+
+    if (showLoading) setLoading(true);
 
     if (!userId) {
+      if (seq !== loadSeqRef.current) return;
       setCart([]);
+      setError(null);
       setLoading(false);
       return;
     }
 
-    const { data } = await cartService.getCart(userId);
+    const { data, error: fetchError } = await cartService.getCart(userId);
+
+    if (seq !== loadSeqRef.current) return;
+
+    if (fetchError) {
+      console.error("CartContext load error:", fetchError);
+      setError(fetchError);
+      // Keep previous cart on soft reload failures; clear only on initial load
+      if (showLoading) setCart([]);
+      setLoading(false);
+      return;
+    }
+
     setCart(data.items || []);
+    setError(null);
     setLoading(false);
   }, []);
 
@@ -45,7 +64,9 @@ export const CartProvider = ({ children }) => {
       if (!mounted) return;
 
       if (!session?.user) {
+        loadSeqRef.current += 1;
         setCart([]);
+        setError(null);
         setLoading(false);
         return;
       }
@@ -65,48 +86,75 @@ export const CartProvider = ({ children }) => {
 
   const loadCart = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    await loadCartForUser(user?.id);
+    await loadCartForUser(user?.id, { showLoading: false });
   }, [loadCartForUser]);
 
   const addToCart = async (product, quantity = 1) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return toast.error("Login required");
+    if (!user) {
+      toast.error("Please sign in to add to cart");
+      return { ok: false };
+    }
 
-    const { error } = await cartService.addToCart(
+    const productId = product?.id || product?._id || product?.product_id;
+    if (!productId) {
+      toast.error("Invalid product");
+      return { ok: false };
+    }
+
+    const { error: addError } = await cartService.addToCart(
       user.id,
-      product.id,
+      productId,
       quantity
     );
 
-    if (error) return toast.error(error.message || "Failed to add item");
+    if (addError) {
+      toast.error(addError.message || "Failed to add item");
+      return { ok: false };
+    }
 
     toast.success("Added to cart");
-    await loadCartForUser(user.id);
+    await loadCartForUser(user.id, { showLoading: false });
+    return { ok: true };
   };
 
   const removeFromCart = async (cartId) => {
-    const { error } = await cartService.removeFromCart(cartId);
+    const { error: removeError } = await cartService.removeFromCart(cartId);
 
-    if (error) return toast.error("Failed to remove item");
+    if (removeError) {
+      toast.error("Failed to remove item");
+      return { ok: false };
+    }
 
     toast.success("Removed from cart");
     await loadCart();
+    return { ok: true };
   };
 
   const setQuantity = async (cartId, quantity) => {
-    const { error } = await cartService.updateQuantity(cartId, quantity);
+    const { error: qtyError } = await cartService.updateQuantity(cartId, quantity);
 
-    if (error) return toast.error(error.message || "Failed to update quantity");
+    if (qtyError) {
+      toast.error(qtyError.message || "Failed to update quantity");
+      return { ok: false };
+    }
 
     await loadCart();
+    return { ok: true };
   };
 
   const clearCart = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return { ok: false };
 
-    await cartService.clearCart(user.id);
+    const { error: clearError } = await cartService.clearCart(user.id);
+    if (clearError) {
+      toast.error("Failed to clear cart");
+      return { ok: false };
+    }
+
     setCart([]);
+    return { ok: true };
   };
 
   const itemCount = useMemo(
@@ -128,6 +176,7 @@ export const CartProvider = ({ children }) => {
       value={{
         cart,
         loading,
+        error,
         addToCart,
         setQuantity,
         removeFromCart,

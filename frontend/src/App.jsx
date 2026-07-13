@@ -1,9 +1,8 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import Spinner from "@/components/ui/Spinner";
+import StorefrontLayout from "@/components/layout/StorefrontLayout";
 
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import AdminRoute from "@/components/layout/AdminRoute";
@@ -46,37 +45,7 @@ function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-
-        {/* PUBLIC ROUTES WITH LAYOUT */}
-        <Route
-          path="/"
-          element={
-            <>
-              <Navbar />
-               <Home />
-              <Footer />
-            </>
-          }
-        />
-
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/shop/:idOrSlug" element={<ProductDetail />} />
-
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* PROTECTED USER ROUTES */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/wishlist" element={<Wishlist />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/orders/:id" element={<OrderDetail />} />
-          <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
-          <Route path="/profile" element={<Profile />} />
-        </Route>
-
-        {/* ADMIN ROUTES */}
+        {/* ADMIN first — avoids storefront splat stealing /admin/* */}
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -94,9 +63,26 @@ function App() {
           </Route>
         </Route>
 
-        {/* 404 */}
-        <Route path="*" element={<NotFound />} />
+        {/* CUSTOMER STOREFRONT — shared Navbar / Footer / floating cart */}
+        <Route element={<StorefrontLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/shop/:idOrSlug" element={<ProductDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
+          <Route element={<ProtectedRoute />}>
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/orders/:id" element={<OrderDetail />} />
+            <Route path="/orders/:id/confirmation" element={<OrderConfirmation />} />
+            <Route path="/profile" element={<Profile />} />
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Routes>
     </Suspense>
   );

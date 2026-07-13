@@ -5,6 +5,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import { FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
 import { isOutOfStock, isLowStock } from '@/constants/inventory';
+import CartExpressHint from '@/components/checkout/CartExpressHint';
 
 function cartHasBlockingIssues(items = []) {
   return items.some((item) => {
@@ -15,9 +16,23 @@ function cartHasBlockingIssues(items = []) {
 }
 
 export default function Cart() {
-  const { cart, loading, subtotal, addToCart, setQuantity, removeFromCart, getItemPrice, getItemImage } = useCart();
+  const { cart, loading, error, subtotal, setQuantity, removeFromCart, getItemPrice, getItemImage, reloadCart } = useCart();
   const items = cart || [];
   const checkoutBlocked = cartHasBlockingIssues(items);
+
+  if (!loading && error && items.length === 0) {
+    return (
+      <div className="bg-[#0B0B0B] min-h-[70vh] flex flex-col items-center justify-center p-6">
+        <div className="relative z-10 flex flex-col items-center bg-[#111] p-12 rounded-3xl border border-red-500/20 shadow-2xl max-w-md w-full text-center">
+          <h2 className="font-display font-bold text-2xl text-white mb-3">Could not load cart</h2>
+          <p className="text-slate-400 mb-6 text-sm">{error.message || 'Please try again.'}</p>
+          <button type="button" onClick={() => reloadCart()} className="btn-primary w-full">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!loading && items.length === 0) {
     return (
@@ -75,12 +90,7 @@ export default function Cart() {
 
                 const increment = () => {
                   if (unavailable || atMax) return;
-                  addToCart({
-                    id: item.product_id,
-                    name: product.name,
-                    price: unitPrice,
-                    image_url: image,
-                  }, 1);
+                  setQuantity(item.id, Number(item.quantity || 0) + 1);
                 };
                 const decrement = () => setQuantity(item.id, Number(item.quantity || 0) - 1);
                 const handleRemove = () => removeFromCart(item.id);
@@ -149,6 +159,7 @@ export default function Cart() {
               {checkoutBlocked && (
                 <p className="text-xs text-red-400 mb-3">Resolve stock issues above before checkout.</p>
               )}
+              {!checkoutBlocked && <CartExpressHint cartValid={!loading && items.length > 0} />}
               <Link
                 to="/checkout"
                 className={`btn-primary w-full text-center uppercase tracking-widest text-sm shadow-[0_4px_25px_rgba(212,175,55,0.25)] hover:shadow-[0_4px_35px_rgba(212,175,55,0.4)] py-4 ${checkoutBlocked ? 'pointer-events-none opacity-50' : ''}`}

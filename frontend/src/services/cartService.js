@@ -37,7 +37,9 @@ export const cartService = {
 
   addToCart: async (userId, productId, quantity = 1) => {
     try {
-      if (!userId || !productId) return { data: { items: [] }, error: null };
+      if (!userId || !productId) {
+        return { data: { items: [] }, error: { message: 'Missing user or product' } };
+      }
 
       const { product, error: productError } = await fetchProductForCart(productId);
       if (productError) return { data: { items: [] }, error: productError };

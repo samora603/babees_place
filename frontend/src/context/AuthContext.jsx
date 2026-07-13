@@ -6,7 +6,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 import * as authService from '@/services/authService';
 
@@ -24,6 +25,7 @@ export function resolvePostLoginPath(role) {
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -66,17 +68,22 @@ export const AuthProvider = ({ children }) => {
       .single();
 
     if (error) {
+      // Race with handle_new_user trigger — re-fetch instead of failing hard
       console.error('Profile bootstrap error:', error);
-      return null;
+      return fetchProfile(authUser.id);
     }
 
     return data;
   }, [fetchProfile]);
 
+  const clearAuthState = useCallback(() => {
+    setUser(null);
+    setProfile(null);
+  }, []);
+
   const applyAuthSession = useCallback(async (authUser) => {
     if (!authUser) {
-      setUser(null);
-      setProfile(null);
+      clearAuthState();
       return { user: null, profile: null };
     }
 
@@ -87,10 +94,16 @@ export const AuthProvider = ({ children }) => {
       return { user: authUser, profile: prof };
     }
 
+    if (!prof) {
+      // Do not leave a half-authenticated session in React state
+      clearAuthState();
+      return { user: authUser, profile: null };
+    }
+
     setUser(authUser);
     setProfile(prof);
     return { user: authUser, profile: prof };
-  }, [ensureProfile]);
+  }, [ensureProfile, clearAuthState]);
 
   const refreshProfile = async () => {
     if (!user?.id) return null;
@@ -113,6 +126,8 @@ export const AuthProvider = ({ children }) => {
 
       const result = await applyAuthSession(authUser);
       if (!result.profile) {
+        await authService.signOut().catch(() => {});
+        clearAuthState();
         throw new Error(
           'Signed in, but your profile could not be loaded. Contact support or try again.',
         );
@@ -143,13 +158,15 @@ export const AuthProvider = ({ children }) => {
       if (data.session?.user) {
         const result = await applyAuthSession(data.session.user);
         if (!result.profile) {
+          await authService.signOut().catch(() => {});
+          clearAuthState();
           throw new Error(
             'Account created, but your profile could not be loaded. Try signing in.',
           );
         }
       }
 
-      return authUser;
+      return { user: authUser, session: data.session || null };
     } finally {
       manualAuthRef.current = false;
     }
@@ -195,9 +212,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await authService.signOut();
-    setUser(null);
-    setProfile(null);
+    try {
+      await authService.signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+      toast.error('Sign out failed. Please try again.');
+      return;
+    }
+    clearAuthState();
     navigate('/login', { replace: true });
   };
 
@@ -212,8 +234,7 @@ export const AuthProvider = ({ children }) => {
         if (data?.session?.user) {
           await applyAuthSession(data.session.user);
         } else {
-          setUser(null);
-          setProfile(null);
+          clearAuthState();
         }
       } finally {
         if (mounted) setInitializing(false);
@@ -228,8 +249,7 @@ export const AuthProvider = ({ children }) => {
       if (!mounted) return;
 
       if (event === 'SIGNED_OUT' || !session?.user) {
-        setUser(null);
-        setProfile(null);
+        clearAuthState();
         return;
       }
 
@@ -254,16 +274,22 @@ export const AuthProvider = ({ children }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [applyAuthSession]);
+  }, [applyAuthSession, clearAuthState]);
 
   useEffect(() => {
-    if (initializing || !user) return;
+    if (initializing || !user || !profile) return;
 
-    const path = window.location.pathname;
+    const path = location.pathname;
     if (!AUTH_PAGES.includes(path)) return;
 
-    navigate(resolvePostLoginPath(profile?.role), { replace: true });
-  }, [user, profile, initializing, navigate]);
+    const from = location.state?.from?.pathname;
+    const safeFrom =
+      from && !AUTH_PAGES.includes(from) && !from.startsWith('/login')
+        ? from
+        : null;
+
+    navigate(safeFrom || resolvePostLoginPath(profile.role), { replace: true });
+  }, [user, profile, initializing, navigate, location.pathname, location.state]);
 
   return (
     <AuthContext.Provider
@@ -276,7 +302,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         refreshProfile,
         updateProfile,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && !!profile,
         isAdmin: isAdminRole(profile?.role),
       }}
     >
