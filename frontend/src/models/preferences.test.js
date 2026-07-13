@@ -31,6 +31,9 @@ describe('preferences model', () => {
       preferredPickupLocationId: null,
       marketingEmails: true,
       smsNotifications: true,
+      emailNotifications: true,
+      orderUpdates: true,
+      paymentUpdates: false,
     });
     expect(payload).toEqual({
       user_id: 'user-1',
@@ -38,6 +41,9 @@ describe('preferences model', () => {
       preferred_pickup_location_id: null,
       marketing_emails: true,
       sms_notifications: true,
+      email_notifications: true,
+      order_updates: true,
+      payment_updates: false,
     });
   });
 

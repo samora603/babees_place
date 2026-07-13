@@ -1,6 +1,10 @@
 import { supabase } from '@/lib/supabaseClient';
-import { LOW_STOCK_THRESHOLD } from '@/constants/inventory';
+import { LOW_STOCK_THRESHOLD, isLowStock } from '@/constants/inventory';
 import { attachProfilesToOrders } from '@/services/profileLookup';
+import { notificationService } from '@/services/notificationService';
+import { NOTIFICATION_EVENTS, ORDER_STATUS_EVENT_MAP } from '@/models/notification';
+import { auditService, AUDIT_ACTIONS } from '@/services/auditService';
+import { logger } from '@/services/logger';
 
 async function deleteProductStorage(productId) {
     try {
@@ -38,6 +42,8 @@ export const adminService = {
             status,
             total,
             payment_status,
+            payment_method,
+            mpesa_receipt_number,
             delivery_type,
             created_at,
             user_id,
@@ -71,8 +77,15 @@ export const adminService = {
         const { status, note } = body;
 
         if (status === 'cancelled') {
+            const { data: before } = await supabase.from('orders').select('user_id').eq('id', id).maybeSingle();
             const { error } = await supabase.rpc('cancel_order', { p_order_id: id });
             if (error) return { data: { data: null, error } };
+            if (before?.user_id) {
+                notificationService.emitSafe(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
+                    userId: before.user_id,
+                    orderId: id,
+                });
+            }
             if (note) {
                 const { data, error: noteErr } = await supabase
                     .from('orders')
@@ -93,6 +106,25 @@ export const adminService = {
         });
         if (error) return { data: { data: null, error } };
         const { data, error: fetchErr } = await supabase.from('orders').select('*').eq('id', id).single();
+
+        const eventType = ORDER_STATUS_EVENT_MAP[status];
+        if (eventType && data?.user_id) {
+            notificationService.emitSafe(eventType, {
+                userId: data.user_id,
+                orderId: id,
+                location: data.pickup_location_id ? 'your selected boutique' : undefined,
+            });
+        }
+
+        auditService.writeAuditSafe({
+            action: AUDIT_ACTIONS.ORDER_UPDATED,
+            entityType: 'order',
+            entityId: id,
+            summary: `Status → ${status}`,
+            metadata: { status, note },
+        });
+        logger.order('Admin order status update', { orderId: id, status });
+
         return { data: { data, error: fetchErr } };
     },
 
@@ -142,16 +174,41 @@ export const adminService = {
 
     updateUserRole: async (id, role) => {
         const { data, error } = await supabase.from('profiles').update({ role }).eq('id', id).select().single();
+        if (!error) {
+            auditService.writeAuditSafe({
+                action: AUDIT_ACTIONS.USER_ROLE_CHANGED,
+                entityType: 'user',
+                entityId: id,
+                summary: `Role → ${role}`,
+                metadata: { role },
+            });
+        }
         return { data: { data, error } };
     },
 
     // Products (admin)
     createProduct: async (body) => {
         const { data, error } = await supabase.from('products').insert(body).select().single();
+        if (!error && data) {
+            auditService.writeAuditSafe({
+                action: AUDIT_ACTIONS.PRODUCT_CREATED,
+                entityType: 'product',
+                entityId: data.id,
+                summary: data.name || 'Product created',
+            });
+        }
         return { data: { data, error } };
     },
     updateProduct: async (id, body) => {
         const { data, error } = await supabase.from('products').update(body).eq('id', id).select().single();
+        if (!error) {
+            auditService.writeAuditSafe({
+                action: AUDIT_ACTIONS.PRODUCT_UPDATED,
+                entityType: 'product',
+                entityId: id,
+                summary: data?.name || 'Product updated',
+            });
+        }
         return { data: { data, error } };
     },
     deleteProduct: async (id) => {
@@ -160,6 +217,14 @@ export const adminService = {
             return { data: { data: null, error: storageResult.error } };
         }
         const { data, error } = await supabase.from('products').delete().eq('id', id).select();
+        if (!error) {
+            auditService.writeAuditSafe({
+                action: AUDIT_ACTIONS.PRODUCT_DELETED,
+                entityType: 'product',
+                entityId: id,
+                summary: 'Product deleted',
+            });
+        }
         return { data: { data, error } };
     },
     deleteProductStorage,
@@ -253,6 +318,26 @@ export const adminService = {
             .eq('id', productId)
             .select()
             .single();
+
+        if (!error && data && isLowStock(data.stock)) {
+            notificationService.emitSafe(NOTIFICATION_EVENTS.ADMIN_LOW_INVENTORY, {
+                productName: data.name,
+                stock: data.stock,
+                metadata: { productId: data.id },
+                notifyAdmins: true,
+            });
+        }
+
+        if (!error) {
+            auditService.writeAuditSafe({
+                action: AUDIT_ACTIONS.INVENTORY_UPDATED,
+                entityType: 'product',
+                entityId: productId,
+                summary: `Stock → ${stock}`,
+                metadata: { stock },
+            });
+        }
+
         return { data: { data, error } };
     },
 

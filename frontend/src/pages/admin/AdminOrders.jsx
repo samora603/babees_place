@@ -133,6 +133,7 @@ export default function AdminOrders() {
               <th className="text-left p-2">User</th>
               <th className="text-left p-2">Total</th>
               <th className="text-left p-2">Fulfillment</th>
+              <th className="text-left p-2">Payment</th>
               <th className="text-left p-2">Status</th>
               <th className="text-left p-2">Date</th>
               <th className="text-left p-2">Actions</th>
@@ -152,6 +153,15 @@ export default function AdminOrders() {
                 </td>
                 <td className="p-2">{formatCurrency(o.total)}</td>
                 <td className="p-2 text-xs text-slate-400 capitalize">{o.delivery_type || '—'}</td>
+                <td className="p-2">
+                  <div className="flex flex-col gap-1">
+                    <OrderStatusBadge status={o.payment_status || 'pending'} type="payment" />
+                    <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                      {(o.payment_method || 'cod').replace('_', ' ')}
+                      {o.mpesa_receipt_number ? ` · ${o.mpesa_receipt_number}` : ''}
+                    </span>
+                  </div>
+                </td>
                 <td className="p-2"><OrderStatusBadge status={o.status} /></td>
                 <td className="p-2">{formatDate(o.created_at)}</td>
                 <td className="p-2 space-x-2">
@@ -183,7 +193,7 @@ export default function AdminOrders() {
             </div>
 
             <div>
-              <label className="text-sm text-slate-400 block mb-1">Payment status (COD manual)</label>
+              <label className="text-sm text-slate-400 block mb-1">Payment status</label>
               <select value={newPaymentStatus} onChange={(e) => setNewPaymentStatus(e.target.value)} className="input w-full">
                 {Object.entries(PAYMENT_STATUSES).map(([k, v]) => (
                   <option key={k} value={k}>{v.label}</option>

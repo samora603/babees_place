@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from '@/utils/helpers';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import Spinner from '@/components/ui/Spinner';
 import Button from '@/components/ui/Button';
+import ExploreSuggestions from '@/components/recommendations/ExploreSuggestions';
 
 export default function Orders() {
   const { user } = useAuth();
@@ -46,7 +47,9 @@ export default function Orders() {
       <div className="section-container py-20 text-center space-y-4">
         <p className="text-red-400">Could not load your orders.</p>
         <p className="text-sm text-slate-500">{error.message}</p>
-        <Button variant="secondary" onClick={loadOrders}>Retry</Button>
+        <Button variant="secondary" onClick={loadOrders}>
+          Retry
+        </Button>
       </div>
     );
   }
@@ -56,9 +59,15 @@ export default function Orders() {
       <h1 className="font-display font-bold text-3xl text-white mb-8">My Orders</h1>
 
       {orders.length === 0 ? (
-        <div className="card p-10 text-center text-slate-400">
-          <p className="mb-4">You have no orders yet.</p>
-          <Link to="/shop" className="btn-primary inline-block">Start Shopping</Link>
+        <div className="space-y-10">
+          <div className="card p-10 text-center text-slate-400">
+            <p className="mb-2">You have no orders yet.</p>
+          </div>
+          <ExploreSuggestions
+            title="Find something you love"
+            message="When you place an order, it will show up here — start with these picks."
+            ctaLabel="Start Shopping"
+          />
         </div>
       ) : (
         <div className="space-y-4">
@@ -69,12 +78,16 @@ export default function Orders() {
               className="card p-5 block hover:border-brand-500/30 transition-colors"
             >
               <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
-                <h3 className="font-display font-semibold text-lg text-white">{order.orderNumber}</h3>
+                <h3 className="font-display font-semibold text-lg text-white">
+                  {order.orderNumber}
+                </h3>
                 <OrderStatusBadge status={order.status} />
               </div>
               <div className="flex flex-wrap justify-between text-sm text-slate-400 gap-2">
                 <span>{formatDate(order.created_at)}</span>
-                <span className="font-bold text-brand-400">{formatCurrency(order.total_amount)}</span>
+                <span className="font-bold text-brand-400">
+                  {formatCurrency(order.total_amount)}
+                </span>
               </div>
               <div className="mt-3 pt-3 border-t border-surface-border text-sm text-slate-400">
                 {order.items?.map((item) => (

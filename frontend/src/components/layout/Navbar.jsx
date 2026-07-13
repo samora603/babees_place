@@ -4,6 +4,7 @@ import { FiShoppingCart, FiHeart, FiSearch, FiUser, FiMenu, FiX } from 'react-ic
 import { GiBee } from 'react-icons/gi';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Navbar() {
   const { user, profile, logout } = useAuth();
@@ -54,6 +55,7 @@ export default function Navbar() {
 
             {user ? (
               <div className="flex items-center gap-2 ml-4 border-l border-brand-500/20 pl-6">
+                <NotificationBell />
                 <NavLink to="/wishlist" className="btn-ghost relative hover:text-brand-400 group">
                   <FiHeart size={20} className="group-hover:scale-110 transition-transform" />
                 </NavLink>
@@ -75,6 +77,8 @@ export default function Navbar() {
                   <div className="absolute right-0 mt-2 w-48 bg-surface-card border border-brand-500/20 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right group-hover:scale-100 scale-95 z-50">
                     <div className="p-2 space-y-1">
                       <Link to="/profile" className="block px-4 py-2.5 rounded-lg text-sm text-slate-300 hover:text-brand-400 hover:bg-brand-500/10 transition-colors">Profile</Link>
+                      <Link to="/rewards" className="block px-4 py-2.5 rounded-lg text-sm text-slate-300 hover:text-brand-400 hover:bg-brand-500/10 transition-colors">Rewards</Link>
+                      <Link to="/notifications" className="block px-4 py-2.5 rounded-lg text-sm text-slate-300 hover:text-brand-400 hover:bg-brand-500/10 transition-colors">Notifications</Link>
                       <Link to="/orders" className="block px-4 py-2.5 rounded-lg text-sm text-slate-300 hover:text-brand-400 hover:bg-brand-500/10 transition-colors">My Orders</Link>
                       {profile?.role === 'admin' && (
                         <Link to="/admin/dashboard" className="block px-4 py-2.5 rounded-lg text-sm text-brand-500 font-medium hover:bg-brand-500/10 transition-colors">Admin Dashboard</Link>
@@ -119,6 +123,8 @@ export default function Navbar() {
                 <>
                   <Link to="/cart" className="block py-3 px-4 rounded-xl text-slate-200 hover:bg-brand-500/10 hover:text-brand-400 font-medium transition-colors" onClick={() => setMenuOpen(false)}>Cart ({itemCount})</Link>
                   <Link to="/wishlist" className="block py-3 px-4 rounded-xl text-slate-200 hover:bg-brand-500/10 hover:text-brand-400 font-medium transition-colors" onClick={() => setMenuOpen(false)}>Wishlist</Link>
+                  <Link to="/rewards" className="block py-3 px-4 rounded-xl text-slate-200 hover:bg-brand-500/10 hover:text-brand-400 font-medium transition-colors" onClick={() => setMenuOpen(false)}>Rewards</Link>
+                  <Link to="/notifications" className="block py-3 px-4 rounded-xl text-slate-200 hover:bg-brand-500/10 hover:text-brand-400 font-medium transition-colors" onClick={() => setMenuOpen(false)}>Notifications</Link>
                   <Link to="/orders" className="block py-3 px-4 rounded-xl text-slate-200 hover:bg-brand-500/10 hover:text-brand-400 font-medium transition-colors" onClick={() => setMenuOpen(false)}>My Orders</Link>
                   <Link to="/profile" className="block py-3 px-4 rounded-xl text-slate-200 hover:bg-brand-500/10 hover:text-brand-400 font-medium transition-colors" onClick={() => setMenuOpen(false)}>Profile</Link>
                   {profile?.role === 'admin' && <Link to="/admin/dashboard" className="block py-3 px-4 rounded-xl text-brand-500 font-bold hover:bg-brand-500/10 transition-colors" onClick={() => setMenuOpen(false)}>Admin Dashboard</Link>}

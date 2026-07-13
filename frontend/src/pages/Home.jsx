@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { FiArrowRight, FiShoppingBag, FiTruck, FiSmartphone } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
@@ -7,6 +7,11 @@ import { productService } from '@/services/productService';
 
 import ProductGrid from '@/components/products/ProductGrid';
 import Hero from '@/components/layout/Hero';
+import RecommendationSkeleton from '@/components/recommendations/RecommendationSkeleton';
+
+const HomeDiscoverSections = lazy(() =>
+  import('@/components/recommendations/HomeDiscoverSections'),
+);
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
@@ -34,7 +39,10 @@ export default function Home() {
         let products = featuredRes?.data?.data || [];
 
         if (products.length === 0) {
-          const fallbackRes = await productService.getProducts({ limit: 8, sort: '-createdAt' });
+          const fallbackRes = await productService.getProducts({
+            limit: 8,
+            sort: '-createdAt',
+          });
           products = fallbackRes?.data?.data || [];
           setUsingFallback(products.length > 0);
         }
@@ -86,7 +94,6 @@ export default function Home() {
     <div className="bg-[#0B0B0B] min-h-screen text-slate-200">
       <Hero />
 
-      {/* FEATURES */}
       <section className="section-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
@@ -120,7 +127,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CATEGORIES */}
       {categories.length > 0 && (
         <section className="section-container py-16">
           <div className="flex flex-col items-center mb-8">
@@ -142,32 +148,36 @@ export default function Home() {
         </section>
       )}
 
-      {/* FEATURED PRODUCTS */}
       <section className="section-container py-16">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-3xl font-bold uppercase">
-              Featured Products
-            </h2>
+            <h2 className="text-3xl font-bold uppercase">Featured Products</h2>
             <p className="text-gray-400 text-sm">
               {usingFallback ? 'Latest arrivals' : 'Hand-picked selections'}
             </p>
           </div>
 
-          <Link
-            to="/shop"
-            className="text-brand-500 flex items-center gap-2"
-          >
+          <Link to="/shop" className="text-brand-500 flex items-center gap-2">
             View All <FiArrowRight />
           </Link>
         </div>
 
         <ProductGrid
           products={featured}
-          loading={loading}
+          loading={false}
           emptyMessage="No products available."
         />
       </section>
+
+      <Suspense
+        fallback={
+          <div className="section-container py-12">
+            <RecommendationSkeleton count={4} />
+          </div>
+        }
+      >
+        <HomeDiscoverSections />
+      </Suspense>
     </div>
   );
 }

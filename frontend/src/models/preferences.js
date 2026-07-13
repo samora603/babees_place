@@ -5,6 +5,9 @@
  * @property {string | null} preferredPickupLocationId
  * @property {boolean} marketingEmails
  * @property {boolean} smsNotifications
+ * @property {boolean} emailNotifications
+ * @property {boolean} orderUpdates
+ * @property {boolean} paymentUpdates
  * @property {string} createdAt
  * @property {string} updatedAt
  */
@@ -14,6 +17,9 @@ export const EMPTY_PREFERENCES = {
   preferredPickupLocationId: null,
   marketingEmails: false,
   smsNotifications: false,
+  emailNotifications: true,
+  orderUpdates: true,
+  paymentUpdates: true,
 };
 
 /**
@@ -28,6 +34,9 @@ export function mapPreferencesRow(row) {
     preferredPickupLocationId: row.preferred_pickup_location_id || null,
     marketingEmails: Boolean(row.marketing_emails),
     smsNotifications: Boolean(row.sms_notifications),
+    emailNotifications: row.email_notifications == null ? true : Boolean(row.email_notifications),
+    orderUpdates: row.order_updates == null ? true : Boolean(row.order_updates),
+    paymentUpdates: row.payment_updates == null ? true : Boolean(row.payment_updates),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -44,6 +53,9 @@ export function mapPreferencesToDbPayload(userId, input = {}) {
     preferred_pickup_location_id: input.preferredPickupLocationId || null,
     marketing_emails: Boolean(input.marketingEmails),
     sms_notifications: Boolean(input.smsNotifications),
+    email_notifications: input.emailNotifications !== false,
+    order_updates: input.orderUpdates !== false,
+    payment_updates: input.paymentUpdates !== false,
   };
 }
 

@@ -10,6 +10,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 import * as authService from '@/services/authService';
+import { notificationService } from '@/services/notificationService';
+import { NOTIFICATION_EVENTS } from '@/models/notification';
 
 const AuthContext = createContext(null);
 
@@ -164,6 +166,40 @@ export const AuthProvider = ({ children }) => {
             'Account created, but your profile could not be loaded. Try signing in.',
           );
         }
+      }
+
+      notificationService.emitSafe(NOTIFICATION_EVENTS.ACCOUNT_REGISTRATION, {
+        userId: authUser.id,
+        email: email,
+        name: fullName || 'there',
+      });
+      notificationService.emitSafe(NOTIFICATION_EVENTS.WELCOME, {
+        userId: authUser.id,
+        email: email,
+        name: fullName || 'there',
+      });
+
+      // WS8 — bootstrap loyalty + optional referral code from session
+      import('@/services/loyaltyService')
+        .then(({ loyaltyService }) => loyaltyService.ensureLoyaltyAccount(authUser.id))
+        .catch(() => {});
+      try {
+        const refCode = sessionStorage.getItem('babees_referral')
+          || localStorage.getItem('babees_referral');
+        if (refCode) {
+          import('@/services/referralService')
+            .then(({ referralService }) => referralService.attachReferralOnSignup({
+              referredUserId: authUser.id,
+              referralCode: refCode,
+            }))
+            .then(() => {
+              sessionStorage.removeItem('babees_referral');
+              localStorage.removeItem('babees_referral');
+            })
+            .catch(() => {});
+        }
+      } catch {
+        // storage may be unavailable
       }
 
       return { user: authUser, session: data.session || null };

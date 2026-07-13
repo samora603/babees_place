@@ -6,6 +6,8 @@ import { FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
 import { isOutOfStock, isLowStock } from '@/constants/inventory';
 import CartExpressHint from '@/components/checkout/CartExpressHint';
+import CartCrossSell from '@/components/recommendations/CartCrossSell';
+import ExploreSuggestions from '@/components/recommendations/ExploreSuggestions';
 
 function cartHasBlockingIssues(items = []) {
   return items.some((item) => {
@@ -36,15 +38,22 @@ export default function Cart() {
 
   if (!loading && items.length === 0) {
     return (
-      <div className="bg-[#0B0B0B] min-h-[70vh] flex flex-col items-center justify-center p-6 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col items-center bg-[#111] p-12 rounded-3xl border border-brand-500/10 shadow-2xl max-w-md w-full text-center">
-          <div className="w-20 h-20 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-500 mb-6 drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
-             <FiShoppingBag size={32} />
+      <div className="bg-[#0B0B0B] min-h-[70vh] py-12 px-4">
+        <div className="max-w-5xl mx-auto space-y-10">
+          <div className="flex flex-col items-center bg-[#111] p-12 rounded-3xl border border-brand-500/10 shadow-2xl max-w-md mx-auto w-full text-center">
+            <div className="w-20 h-20 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-500 mb-6 drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]">
+              <FiShoppingBag size={32} />
+            </div>
+            <h2 className="font-display font-bold text-3xl text-white mb-3">Your Cart is Empty</h2>
+            <p className="text-slate-400 mb-2 font-light">
+              Select from our exclusive pieces to curate your order.
+            </p>
           </div>
-          <h2 className="font-display font-bold text-3xl text-white mb-3">Your Cart is Empty</h2>
-          <p className="text-slate-400 mb-8 font-light">Select from our exclusive pieces to curate your order.</p>
-          <Link to="/shop" className="btn-primary w-full shadow-[0_4px_20px_rgba(212,175,55,0.2)]">Explore Collection</Link>
+          <ExploreSuggestions
+            title="Start with these"
+            message="Your cart is empty — explore popular products below."
+            ctaLabel="Explore Collection"
+          />
         </div>
       </div>
     );
@@ -169,6 +178,8 @@ export default function Cart() {
             </div>
           </div>
         </div>
+
+        {!loading && items.length > 0 ? <CartCrossSell cartItems={items} /> : null}
       </div>
     </div>
   );

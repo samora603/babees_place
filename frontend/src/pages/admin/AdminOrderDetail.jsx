@@ -8,16 +8,19 @@ import { PAYMENT_STATUSES } from '@/utils/constants';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import OrderStatusTimeline from '@/components/orders/OrderStatusTimeline';
 import FulfillmentDetails from '@/components/orders/FulfillmentDetails';
+import PaymentDetailsCard from '@/components/orders/PaymentDetailsCard';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
 import { FiArrowLeft } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
+import { paymentService } from '@/services/paymentService';
 
 export default function AdminOrderDetail() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
+  const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -28,8 +31,14 @@ export default function AdminOrderDetail() {
 
   const loadOrder = () => {
     setLoading(true);
-    adminService.getOrder(id)
-      .then(({ data }) => setOrder(mapOrder(data.data)))
+    Promise.all([
+      adminService.getOrder(id),
+      paymentService.getLatestPaymentForOrder(id).catch(() => null),
+    ])
+      .then(([orderRes, latestPayment]) => {
+        setOrder(mapOrder(orderRes.data.data));
+        setPayment(latestPayment);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -135,6 +144,7 @@ export default function AdminOrderDetail() {
           </div>
           <OrderStatusTimeline status={order.status} deliveryType={order.deliveryType} />
           <FulfillmentDetails order={order} />
+          <PaymentDetailsCard order={order} payment={payment} />
         </div>
 
         <div className="lg:col-span-2 bg-[#111] p-6 rounded-2xl border border-brand-500/10">

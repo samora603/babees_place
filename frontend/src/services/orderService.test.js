@@ -18,6 +18,12 @@ vi.mock('@/services/cartService', () => ({
   },
 }));
 
+vi.mock('@/services/notificationService', () => ({
+  notificationService: {
+    emitSafe: vi.fn(() => Promise.resolve({})),
+  },
+}));
+
 describe('orderService', () => {
   beforeEach(() => {
     rpcMock.mockReset();
@@ -26,6 +32,8 @@ describe('orderService', () => {
   });
 
   it('cancelOrder calls cancel_order RPC', async () => {
+    const chain = makeQuery({ data: { id: 'order-1', user_id: 'user-1' }, error: null });
+    fromMock.mockReturnValue(chain);
     rpcMock.mockResolvedValue({ error: null });
     const { cancelOrder } = await import('./orderService');
     await cancelOrder('order-1');
@@ -33,6 +41,8 @@ describe('orderService', () => {
   });
 
   it('cancelOrder propagates RPC errors', async () => {
+    const chain = makeQuery({ data: { id: 'order-1', user_id: 'user-1' }, error: null });
+    fromMock.mockReturnValue(chain);
     rpcMock.mockResolvedValue({ error: { message: 'Unauthorized' } });
     const { cancelOrder } = await import('./orderService');
     await expect(cancelOrder('order-1')).rejects.toMatchObject({ message: 'Unauthorized' });
@@ -51,6 +61,15 @@ describe('orderService', () => {
       p_pickup_location_id: 'loc-1',
       p_delivery_address: null,
       p_customer_note: null,
+      p_payment_method: 'cod',
+      p_coupon_code: null,
+      p_loyalty_points: 0,
+      p_gift_card_code: null,
+      p_gift_card_amount: 0,
+      p_discount_amount: 0,
+      p_free_delivery: false,
+      p_promotions_applied: [],
+      p_referral_code: null,
     });
     expect(result.order.id).toBe('new-order-id');
   });

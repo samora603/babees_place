@@ -56,6 +56,7 @@ describe('checkoutService', () => {
       pickupLocationId: 'loc-1',
       deliveryAddress: null,
       customerNote: null,
+      paymentMethod: 'cod',
     });
     expect(result.order.id).toBe('order-1');
   });

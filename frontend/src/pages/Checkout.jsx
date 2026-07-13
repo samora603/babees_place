@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { orderService } from "@/services/orderService";
 import { checkoutService } from "@/services/checkoutService";
 import { addressService } from "@/services/addressService";
+import { paymentService } from "@/services/paymentService";
+import { validateCheckoutPayment } from "@/services/paymentValidation";
 import { formatCurrency } from "@/utils/helpers";
 import { DELIVERY_TYPES } from "@/utils/constants";
 import { DELIVERY_FEE } from "@/utils/orderStatus";
@@ -18,6 +20,10 @@ import {
 } from "@/models/address";
 import CheckoutDeliverySection, { emptyCheckoutAddress } from "@/components/checkout/CheckoutDeliverySection";
 import ExpressCheckoutPanel from "@/components/checkout/ExpressCheckoutPanel";
+import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
+import MpesaPaymentPanel from "@/components/checkout/MpesaPaymentPanel";
+import CheckoutRewardsPanel, { useCheckoutRewardsState } from "@/components/checkout/CheckoutRewardsPanel";
+import { checkoutRewardsService } from "@/services/checkoutRewardsService";
 import toast from "react-hot-toast";
 import { GiBee } from "react-icons/gi";
 import Button from "@/components/ui/Button";
@@ -25,7 +31,7 @@ import { isOutOfStock } from "@/constants/inventory";
 
 export default function Checkout() {
   const { cart, subtotal, reloadCart, getItemPrice, getItemImage, loading: cartLoading } = useCart();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [pickupLocations, setPickupLocations] = useState([]);
@@ -37,6 +43,10 @@ export default function Checkout() {
   const [newAddressForm, setNewAddressForm] = useState({ ...EMPTY_ADDRESS_FORM });
   const [saveNewAddress, setSaveNewAddress] = useState(true);
   const [checkoutPreferences, setCheckoutPreferences] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [mpesaPhone, setMpesaPhone] = useState("");
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState("");
+  const rewards = useCheckoutRewardsState();
   const [form, setForm] = useState({
     deliveryType: "pickup",
     pickupLocationId: "",
@@ -56,6 +66,7 @@ export default function Checkout() {
       const defaultAddr = getDefaultAddress(addresses);
       const preferredType = preferences?.preferredFulfillment || "pickup";
       const preferredPickup = preferences?.preferredPickupLocationId || "";
+      const phone = profile?.phone || defaultAddr?.phone || "";
 
       setForm((f) => ({
         ...f,
@@ -65,9 +76,11 @@ export default function Checkout() {
           ? addressToCheckoutDelivery(defaultAddr)
           : {
             ...emptyCheckoutAddress,
-            phone: profile?.phone || "",
+            phone: phone || "",
           },
       }));
+
+      if (phone) setMpesaPhone(phone);
 
       if (addresses.length > 0) {
         setAddressMode("saved");
@@ -106,14 +119,107 @@ export default function Checkout() {
     [checkoutPreferences, savedAddresses, pickupLocations, cart.length, cartBlocked],
   );
 
-  const deliveryFee = form.deliveryType === "delivery" ? DELIVERY_FEE : 0;
-  const total = subtotal + deliveryFee;
+  const cartLines = useMemo(() => cart.map((item) => {
+    const product = item.product || {};
+    return {
+      id: item.id,
+      productId: product.id || item.product_id,
+      categoryId: product.category_id || product.categoryId || null,
+      price: getItemPrice(item),
+      quantity: Number(item.quantity || 1),
+      name: product.name,
+    };
+  }), [cart, getItemPrice]);
+
+  const refreshRewardsPreview = useCallback(async () => {
+    if (!cartLines.length) {
+      rewards.setPreview(null);
+      return;
+    }
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const preview = await checkoutRewardsService.buildCheckoutRewardPreview({
+        cartLines,
+        userId: authUser?.id || user?.id,
+        deliveryType: form.deliveryType,
+        couponCode: rewards.appliedCouponCode,
+        loyaltyPointsToRedeem: rewards.loyaltyPoints,
+        giftCardCode: rewards.appliedGiftCardCode,
+      });
+      rewards.setPreview(preview);
+    } catch (err) {
+      console.warn('rewards preview:', err);
+    }
+  }, [
+    cartLines,
+    form.deliveryType,
+    rewards.appliedCouponCode,
+    rewards.loyaltyPoints,
+    rewards.appliedGiftCardCode,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    refreshRewardsPreview();
+  }, [refreshRewardsPreview]);
+
+  const deliveryFee = rewards.preview
+    ? rewards.preview.deliveryFee
+    : (form.deliveryType === "delivery" ? DELIVERY_FEE : 0);
+  const total = rewards.preview ? rewards.preview.total : (subtotal + deliveryFee);
+
+  const handleApplyCoupon = async () => {
+    rewards.setCouponError('');
+    rewards.setCouponMessage('');
+    if (!rewards.couponCode.trim()) {
+      rewards.setAppliedCouponCode('');
+      rewards.setCouponMessage('Coupon cleared');
+      return;
+    }
+    rewards.setAppliedCouponCode(rewards.couponCode.trim());
+    // preview refresh via effect
+    setTimeout(async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const preview = await checkoutRewardsService.buildCheckoutRewardPreview({
+          cartLines,
+          userId: authUser?.id,
+          deliveryType: form.deliveryType,
+          couponCode: rewards.couponCode.trim(),
+          loyaltyPointsToRedeem: rewards.loyaltyPoints,
+          giftCardCode: rewards.appliedGiftCardCode,
+        });
+        rewards.setPreview(preview);
+        if (preview.couponValid === false) {
+          rewards.setCouponError(preview.couponErrors?.[0] || 'Invalid coupon');
+          rewards.setAppliedCouponCode('');
+        } else {
+          rewards.setCouponMessage('Coupon applied');
+        }
+      } catch {
+        rewards.setCouponError('Could not validate coupon');
+      }
+    }, 0);
+  };
+
+  const handleApplyGiftCard = async () => {
+    rewards.setGiftCardError('');
+    rewards.setGiftCardMessage('');
+    if (!rewards.giftCardCode.trim()) {
+      rewards.setAppliedGiftCardCode('');
+      rewards.setGiftCardMessage('Gift card cleared');
+      return;
+    }
+    rewards.setAppliedGiftCardCode(rewards.giftCardCode.trim());
+    rewards.setGiftCardMessage('Gift card applied');
+  };
 
   const handleSelectSavedAddress = (addressId) => {
     setSelectedAddressId(addressId);
     const address = savedAddresses.find((a) => a.id === addressId);
     if (address) {
       setForm((f) => ({ ...f, deliveryAddress: addressToCheckoutDelivery(address) }));
+      if (address.phone) setMpesaPhone(address.phone);
     }
   };
 
@@ -153,10 +259,12 @@ export default function Checkout() {
         return;
       }
 
+      // Express checkout remains COD to preserve the fast path.
       const { order } = await checkoutService.placeExpressOrder(
         user.id,
         expressStatus,
         form.customerNote,
+        "cod",
       );
       await reloadCart();
       toast.success("Order placed successfully!");
@@ -196,8 +304,21 @@ export default function Checkout() {
       toast.error("Please complete all required fields");
       return;
     }
+
+    const payValidation = validateCheckoutPayment({
+      method: paymentMethod,
+      phone: mpesaPhone,
+      amount: total,
+    });
+    if (!payValidation.valid) {
+      setErrors((prev) => ({ ...prev, ...payValidation.errors }));
+      toast.error(Object.values(payValidation.errors)[0] || "Check payment details");
+      return;
+    }
+
     setErrors({});
     setSubmitting(true);
+    setPaymentStatusMessage("");
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -220,6 +341,14 @@ export default function Checkout() {
         }
       }
 
+      const rewardPayload = checkoutRewardsService.buildPlaceOrderRewardPayload(
+        rewards.preview || { merchandiseDiscount: 0, loyaltyDiscount: 0, loyaltyPoints: 0, giftCardAmount: 0, freeDelivery: false, applied: [], couponValid: false },
+        {
+          couponCode: rewards.appliedCouponCode,
+          giftCardCode: rewards.appliedGiftCardCode,
+        },
+      );
+
       const fulfillment = {
         deliveryType: form.deliveryType,
         pickupLocationId: form.deliveryType === "pickup" ? form.pickupLocationId : null,
@@ -227,10 +356,40 @@ export default function Checkout() {
           ? buildDeliveryAddressPayload(deliveryAddress)
           : null,
         customerNote: form.customerNote?.trim() || null,
+        paymentMethod,
+        couponCode: rewardPayload.p_coupon_code,
+        loyaltyPoints: rewardPayload.p_loyalty_points,
+        giftCardCode: rewardPayload.p_gift_card_code,
+        giftCardAmount: rewardPayload.p_gift_card_amount,
+        discountAmount: rewardPayload.p_discount_amount,
+        freeDelivery: rewardPayload.p_free_delivery,
+        promotionsApplied: rewardPayload.p_promotions_applied,
+        amount: total,
       };
 
       const { order } = await orderService.placeOrder(user.id, fulfillment);
       await reloadCart();
+
+      // COD path: still award loyalty for paid-on-delivery later; award on place for COD convenience
+      if (paymentMethod === "cod") {
+        import("@/services/loyaltyService")
+          .then(({ loyaltyService }) => loyaltyService.awardPointsForOrder(order.id))
+          .catch(() => {});
+      }
+
+      if (paymentMethod === "mpesa") {
+        setPaymentStatusMessage("Sending M-Pesa STK Push…");
+        const result = await paymentService.createPaymentForOrder({
+          orderId: order.id,
+          method: "mpesa",
+          phone: mpesaPhone,
+          amount: total,
+        });
+        toast.success("Check your phone for the M-Pesa prompt");
+        navigate(`/orders/${order.id}/pay/${result.payment.id}`);
+        return;
+      }
+
       toast.success("Order placed successfully!");
       navigate(`/orders/${order.id}/confirmation`);
     } catch (err) {
@@ -238,6 +397,7 @@ export default function Checkout() {
       toast.error(err.message || "Checkout failed");
     } finally {
       setSubmitting(false);
+      setPaymentStatusMessage("");
     }
   };
 
@@ -276,7 +436,7 @@ export default function Checkout() {
         {expressStatus.eligible && !cartBlocked && (
           <div className="mb-8">
             <ExpressCheckoutPanel
-              summary={expressStatus.summary}
+              summary={`${expressStatus.summary} · Cash on Delivery`}
               totalLabel={formatCurrency(total)}
               onExpressCheckout={handleExpressCheckout}
               disabled={submitting || cartBlocked}
@@ -357,6 +517,42 @@ export default function Checkout() {
               </div>
             </div>
 
+            <div className="card p-6 space-y-4">
+              <PaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                disabled={submitting}
+                error={errors.method}
+              />
+              {paymentMethod === "mpesa" && (
+                <MpesaPaymentPanel
+                  phone={mpesaPhone}
+                  onPhoneChange={setMpesaPhone}
+                  disabled={submitting}
+                  error={errors.phone}
+                  statusMessage={paymentStatusMessage}
+                />
+              )}
+            </div>
+
+            <CheckoutRewardsPanel
+              couponCode={rewards.couponCode}
+              onCouponCodeChange={rewards.setCouponCode}
+              onApplyCoupon={handleApplyCoupon}
+              couponMessage={rewards.couponMessage}
+              couponError={rewards.couponError}
+              loyaltyBalance={rewards.preview?.loyaltyBalance || 0}
+              loyaltyPoints={rewards.loyaltyPoints}
+              onLoyaltyPointsChange={rewards.setLoyaltyPoints}
+              giftCardCode={rewards.giftCardCode}
+              onGiftCardCodeChange={rewards.setGiftCardCode}
+              onApplyGiftCard={handleApplyGiftCard}
+              giftCardMessage={rewards.giftCardMessage}
+              giftCardError={rewards.giftCardError}
+              preview={rewards.preview}
+              disabled={submitting}
+            />
+
             <div className="space-y-4">
               <h2 className="font-display font-semibold text-lg text-white uppercase tracking-widest">Order Review</h2>
               {cart.map((item) => {
@@ -387,10 +583,36 @@ export default function Checkout() {
                   <span className="text-slate-400">Subtotal</span>
                   <span className="text-white">{formatCurrency(subtotal)}</span>
                 </div>
+                {(rewards.preview?.merchandiseDiscount || 0) > 0 && (
+                  <div className="flex justify-between text-brand-400">
+                    <span>Discounts</span>
+                    <span>−{formatCurrency(rewards.preview.merchandiseDiscount)}</span>
+                  </div>
+                )}
+                {(rewards.preview?.giftCardAmount || 0) > 0 && (
+                  <div className="flex justify-between text-brand-400">
+                    <span>Gift card</span>
+                    <span>−{formatCurrency(rewards.preview.giftCardAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-slate-400">Delivery</span>
                   <span className="text-white">
-                    {form.deliveryType === "delivery" ? formatCurrency(DELIVERY_FEE) : "Free (pickup)"}
+                    {form.deliveryType === "delivery"
+                      ? (rewards.preview?.freeDelivery ? "Free" : formatCurrency(deliveryFee || DELIVERY_FEE))
+                      : "Free (pickup)"}
+                  </span>
+                </div>
+                {(rewards.preview?.savings || 0) > 0 && (
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>You save</span>
+                    <span>{formatCurrency(rewards.preview.savings)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Payment</span>
+                  <span className="text-white uppercase tracking-wide text-xs">
+                    {paymentMethod === "mpesa" ? "M-Pesa" : "COD"}
                   </span>
                 </div>
               </div>
@@ -398,9 +620,8 @@ export default function Checkout() {
                 <span className="text-sm uppercase tracking-widest text-slate-400">Total</span>
                 <span className="font-display font-bold text-3xl text-brand-400">{formatCurrency(total)}</span>
               </div>
-              <p className="text-xs text-slate-500 mb-4">Payment: Cash on delivery / pickup (COD). Pay when you receive your order.</p>
               <Button onClick={handleCheckout} loading={submitting} disabled={cartBlocked} className="w-full py-4 uppercase tracking-widest">
-                Place Order
+                {paymentMethod === "mpesa" ? "Pay with M-Pesa" : "Place Order"}
               </Button>
               <Link to="/cart" className="block text-center text-sm text-slate-400 hover:text-brand-400 mt-4">
                 Back to cart

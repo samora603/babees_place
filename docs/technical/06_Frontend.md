@@ -98,4 +98,88 @@ Returning customers with saved preferences may use **express checkout**:
 
 Express requires valid cart + configured preferences (pickup location or default delivery address). Standard checkout from 5.1 remains available below the express panel.
 
+### Recommendations (Phase 2 WS5 — Milestone 5.3)
+
+Rule-based, deterministic product discovery — no ML / external APIs.
+
+| Piece | Role |
+|---|---|
+| `models/recommendations.js` | Ranking, dedupe, buy-again frequency, cross-sell scoring |
+| `recentlyViewedService.js` | Last 12 views in `localStorage` (works for guests) |
+| `recommendationService.js` | Same category / price / bestsellers / new arrivals + cart cross-sell |
+| `buyAgainService.js` | Prior order frequency → available products |
+| `RecommendationCarousel` / `ProductStrip` | Accessible horizontal strips |
+| `HomeDiscoverSections` | Recently Viewed, Buy Again, Recommended, Trending, New Arrivals |
+| `YouMayAlsoLike` | Product detail recommendations |
+| `CartCrossSell` | Complementary cart suggestions |
+| `ExploreSuggestions` | Empty-state personalization |
+
+Bestsellers use RPC `get_bestseller_product_ids` (migration `015`). Schema has no `brand` column — brand affinity scores only when `product.brand` is present.
+
+### Payments (Workstream 6)
+
+Modular payment layer — COD remains default; M-Pesa uses a provider interface (mock in development).
+
+| Piece | Role |
+|---|---|
+| `models/payment.js` | Methods, statuses, transitions, `mapPayment`, retry rules |
+| `paymentValidation.js` | Phone / method / amount validation |
+| `providers/paymentProvider.js` | Factory (`mock` \| `daraja`) |
+| `providers/mockMpesaProvider.js` | Local STK simulation |
+| `providers/darajaMpesaProvider.js` | Live stub → Edge Function |
+| `mpesaService.js` | STK / query / callback parse |
+| `paymentService.js` | Create / poll / finalize / retry |
+| `PaymentMethodSelector` / `MpesaPaymentPanel` | Checkout UI |
+| `PaymentPending` / `PaymentSuccess` / `PaymentFailed` | Post-checkout payment UX |
+| `PaymentDetailsCard` | Customer + admin payment summary |
+
+DB: migration `016_payments.sql` (`payments`, `payment_events`, order `payment_method` / `mpesa_receipt_number`).
+
+### Notifications (Workstream 7)
+
+Event-driven notification layer with mock email/SMS providers. In-app inbox for customers and admins.
+
+| Piece | Role |
+|---|---|
+| `models/notification.js` | Events, map helpers, preference shapes |
+| `templateService.js` | `{{var}}` rendering + built-in templates |
+| `notificationService.js` | Emit, inbox CRUD, retry delivery |
+| `notificationPreferenceService.js` | Channel / category toggles |
+| `emailService.js` / `smsService.js` | Channel facades |
+| `providers/notificationProviderFactory.js` | `mock` \| `resend` / AT / Twilio stubs |
+| `NotificationBell` / `NotificationList` | Navbar + center UI |
+| `/notifications` · `/admin/notifications` | Customer + admin panels |
+
+DB: migration `017_notifications.sql`. Providers swap via `VITE_EMAIL_PROVIDER` / `VITE_SMS_PROVIDER` (secrets on Edge Functions only).
+
+### Promotions & loyalty (Workstream 8)
+
+Generic `rewardEngine` + checkout integration. COD/M-Pesa unchanged when no rewards applied.
+
+| Piece | Role |
+|---|---|
+| `rewardEngine.js` | Pure promo/coupon/loyalty/gift evaluation + stacking |
+| `checkoutRewardsService.js` | Checkout preview + place_order payload |
+| `promotionService` / `couponService` / `loyaltyService` / `giftCardService` / `referralService` | Domain services |
+| `CheckoutRewardsPanel` | Coupon / points / gift card UI |
+| `/rewards` | Customer rewards dashboard |
+| Admin Promotions / Coupons / Gift Cards / Loyalty | Management |
+
+DB: migration `018_promotions_loyalty.sql`.
+
+### Operations (Workstream 9)
+
+| Piece | Role |
+|---|---|
+| `logger.js` | Structured, redacting logs |
+| `errorReportingService.js` | Global handlers + provider stubs |
+| `ErrorBoundary` | React render failures |
+| `auditService.js` | Admin action trail |
+| `healthService.js` + `/admin/health` | Connectivity / providers / version |
+| `exportService.js` | CSV / JSON / Excel / PDF |
+| `SeoHead` + `public/robots.txt` / `sitemap.xml` | SEO |
+| PWA scaffold | manifest + optional SW |
+
+DB: migration `019_operations.sql` (audit only).
+
 ## 9. Known issues → see `docs/audits/FRONTEND_AUDIT.md` and `Frontend_Health_Report.md`.

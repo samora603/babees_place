@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { orderService } from '@/services/orderService';
+import { paymentService } from '@/services/paymentService';
 import { formatCurrency, formatDateTime } from '@/utils/helpers';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import OrderStatusTimeline from '@/components/orders/OrderStatusTimeline';
 import FulfillmentDetails from '@/components/orders/FulfillmentDetails';
+import PaymentDetailsCard from '@/components/orders/PaymentDetailsCard';
 import ReorderButton from '@/components/orders/ReorderButton';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -14,18 +16,26 @@ import { FiArrowLeft } from 'react-icons/fi';
 
 export default function OrderDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
+  const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const loadOrder = useCallback(() => {
     setLoading(true);
     setError(null);
-    orderService
-      .getOrder(id)
-      .then(({ data }) => setOrder(data?.data || null))
+    Promise.all([
+      orderService.getOrder(id),
+      paymentService.getLatestPaymentForOrder(id).catch(() => null),
+    ])
+      .then(([orderRes, latestPayment]) => {
+        setOrder(orderRes?.data?.data || null);
+        setPayment(latestPayment);
+      })
       .catch((err) => {
         console.error('OrderDetail load error:', err);
         setError(err);
@@ -49,6 +59,29 @@ export default function OrderDetail() {
       toast.error(err.message || 'Cancellation failed');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleRetryPayment = async () => {
+    if (!order) return;
+    setRetrying(true);
+    try {
+      const phone =
+        payment?.phoneNumber ||
+        order.customerPhone ||
+        order.deliveryAddress?.phone ||
+        '';
+      const result = await paymentService.retryPayment({
+        orderId: order.id,
+        phone,
+        amount: order.totalAmount,
+      });
+      toast.success('STK Push sent');
+      navigate(`/orders/${order.id}/pay/${result.payment.id}`);
+    } catch (err) {
+      toast.error(err.message || 'Could not retry payment');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -83,6 +116,7 @@ export default function OrderDetail() {
   }
 
   const canCancel = orderService.canCancelOrder(order.status, false);
+  const showRetry = paymentService.canRetryPayment(order, payment);
 
   return (
     <div className="section-container py-10 max-w-3xl">
@@ -151,19 +185,13 @@ export default function OrderDetail() {
 
         <div className="space-y-4">
           <OrderStatusTimeline status={order.status} deliveryType={order.deliveryType} />
-          <div className="card p-5 space-y-2 text-sm">
-            <h2 className="font-semibold mb-3">Payment</h2>
-            <div className="flex items-center gap-2">
-              <OrderStatusBadge status={order.paymentStatus} type="payment" />
-            </div>
-            <p className="text-xs text-slate-500 mt-2">Cash on delivery / pickup (COD)</p>
-            {order.mpesaReceiptNumber && (
-              <p className="text-slate-400">
-                Receipt: <code className="text-slate-300">{order.mpesaReceiptNumber}</code>
-              </p>
-            )}
-            <p className="text-slate-400 pt-2">Placed: {formatDateTime(order.createdAt)}</p>
-          </div>
+          <PaymentDetailsCard
+            order={order}
+            payment={payment}
+            onRetry={showRetry ? handleRetryPayment : undefined}
+            retrying={retrying}
+          />
+          <p className="text-xs text-slate-500 px-1">Placed: {formatDateTime(order.createdAt)}</p>
         </div>
       </div>
 

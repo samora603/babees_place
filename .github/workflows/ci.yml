@@ -27,16 +27,43 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate environment example
+        run: |
+          test -f .env.example
+          grep -q 'VITE_SUPABASE_URL' .env.example
+          grep -q 'VITE_SUPABASE_ANON_KEY' .env.example
+
       - name: Lint
         run: npm run lint
 
       - name: Unit tests
         run: npm run test
 
-      - name: Build
-        # Placeholder Supabase env so the production build never depends on real
-        # secrets. Replace with repository secrets if the build needs live values.
+      - name: Production build
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          VITE_LOG_LEVEL: warn
+          VITE_ERROR_PROVIDER: console
         run: npm run build
+
+      - name: Upload build artifact
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7
+
+  # Placeholder deploy job — enable when hosting is configured.
+  # deploy:
+  #   needs: build-test
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: frontend-dist
+  #         path: dist
+  #     - name: Deploy
+  #       run: echo "Configure Vercel/Netlify/Cloudflare Pages secrets here"

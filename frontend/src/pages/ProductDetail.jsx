@@ -1,17 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productService } from '@/services/productService';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
+import { recentlyViewedService } from '@/services/recentlyViewedService';
 import { getImageAtIndex } from '@/utils/images';
 import { formatCurrency, getPrimaryImage } from '@/utils/helpers';
 import { capQuantity, isOutOfStock } from '@/constants/inventory';
 import StarRating from '@/components/ui/StarRating';
 import QuantitySelector from '@/components/ui/QuantitySelector';
 import Skeleton from '@/components/ui/Skeleton';
+import RecommendationSkeleton from '@/components/recommendations/RecommendationSkeleton';
 import toast from 'react-hot-toast';
 import { FiHeart, FiShoppingCart } from 'react-icons/fi';
+
+const YouMayAlsoLike = lazy(() =>
+  import('@/components/recommendations/YouMayAlsoLike'),
+);
+const RecentlyViewedCarousel = lazy(() =>
+  import('@/components/recommendations/RecentlyViewedCarousel'),
+);
 
 export default function ProductDetail() {
   const { idOrSlug } = useParams();
@@ -37,6 +46,9 @@ export default function ProductDetail() {
         if (svcErr) throw svcErr;
         if (!mounted) return;
         setProduct(data?.data ?? null);
+        if (data?.data) {
+          recentlyViewedService.trackView(data.data);
+        }
       } catch (err) {
         console.error('ProductDetail load error:', err);
         if (!mounted) return;
@@ -131,7 +143,8 @@ export default function ProductDetail() {
   const mainImageSrc = getImageAtIndex(galleryImages, activeImage);
 
   return (
-    <div className="section-container py-10">
+    <div>
+      <div className="section-container py-10">
       <div className="grid md:grid-cols-2 gap-10 lg:gap-16">
         <div className="space-y-3">
           <div className="aspect-square rounded-2xl overflow-hidden bg-surface-card border border-surface-border">
@@ -271,6 +284,18 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="section-container py-12">
+            <RecommendationSkeleton />
+          </div>
+        }
+      >
+        <YouMayAlsoLike product={product} />
+        <RecentlyViewedCarousel excludeId={productId} />
+      </Suspense>
     </div>
   );
 }

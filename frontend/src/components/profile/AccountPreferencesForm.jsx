@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { customerProfileService } from '@/services/customerProfileService';
+import { notificationPreferenceService } from '@/services/notificationPreferenceService';
 import { orderService } from '@/services/orderService';
 import { DELIVERY_TYPES } from '@/utils/constants';
 import ProfileSection from './ProfileSection';
@@ -17,28 +18,37 @@ export default function AccountPreferencesForm() {
     preferredPickupLocationId: '',
     marketingEmails: false,
     smsNotifications: false,
+    emailNotifications: true,
+    orderUpdates: true,
+    paymentUpdates: true,
   });
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
-      const [prefsResult, locationsResult] = await Promise.all([
+      const [prefsResult, locationsResult, notifResult] = await Promise.all([
         customerProfileService.getPreferences(),
         orderService.getActivePickupLocations(),
+        notificationPreferenceService.getNotificationPreferences(),
       ]);
       if (!mounted) return;
 
       if (prefsResult.error) {
         setError(prefsResult.error);
-      } else if (prefsResult.data) {
-        setForm({
-          preferredFulfillment: prefsResult.data.preferredFulfillment || '',
-          preferredPickupLocationId: prefsResult.data.preferredPickupLocationId || '',
-          marketingEmails: prefsResult.data.marketingEmails,
-          smsNotifications: prefsResult.data.smsNotifications,
-        });
       }
+
+      const prefs = prefsResult.data;
+      const notif = notifResult.data;
+      setForm({
+        preferredFulfillment: prefs?.preferredFulfillment || '',
+        preferredPickupLocationId: prefs?.preferredPickupLocationId || '',
+        marketingEmails: notif?.marketingEmails ?? prefs?.marketingEmails ?? false,
+        smsNotifications: notif?.smsEnabled ?? prefs?.smsNotifications ?? false,
+        emailNotifications: notif?.emailEnabled ?? prefs?.emailNotifications ?? true,
+        orderUpdates: notif?.orderUpdates ?? prefs?.orderUpdates ?? true,
+        paymentUpdates: notif?.paymentUpdates ?? prefs?.paymentUpdates ?? true,
+      });
       setPickupLocations(locationsResult.data || []);
       setLoading(false);
     })();
@@ -48,27 +58,39 @@ export default function AccountPreferencesForm() {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    const { data, error: saveError } = await customerProfileService.upsertPreferences({
-      preferredFulfillment: form.preferredFulfillment || null,
-      preferredPickupLocationId: form.preferredPickupLocationId || null,
-      marketingEmails: form.marketingEmails,
-      smsNotifications: form.smsNotifications,
-    });
+
+    const [profileResult, notifResult] = await Promise.all([
+      customerProfileService.upsertPreferences({
+        preferredFulfillment: form.preferredFulfillment || null,
+        preferredPickupLocationId: form.preferredPickupLocationId || null,
+        marketingEmails: form.marketingEmails,
+        smsNotifications: form.smsNotifications,
+        emailNotifications: form.emailNotifications,
+        orderUpdates: form.orderUpdates,
+        paymentUpdates: form.paymentUpdates,
+      }),
+      notificationPreferenceService.upsertNotificationPreferences({
+        emailEnabled: form.emailNotifications,
+        smsEnabled: form.smsNotifications,
+        inAppEnabled: true,
+        pushEnabled: false,
+        marketingEmails: form.marketingEmails,
+        orderUpdates: form.orderUpdates,
+        paymentUpdates: form.paymentUpdates,
+      }),
+    ]);
+
     setSaving(false);
 
-    if (saveError) {
-      toast.error(saveError.message || 'Could not save preferences');
+    if (profileResult.error || notifResult.error) {
+      toast.error(
+        profileResult.error?.message
+          || notifResult.error?.message
+          || 'Could not save preferences',
+      );
       return;
     }
 
-    if (data) {
-      setForm({
-        preferredFulfillment: data.preferredFulfillment || '',
-        preferredPickupLocationId: data.preferredPickupLocationId || '',
-        marketingEmails: data.marketingEmails,
-        smsNotifications: data.smsNotifications,
-      });
-    }
     toast.success('Preferences saved');
   };
 
@@ -84,7 +106,7 @@ export default function AccountPreferencesForm() {
     <ProfileSection
       id="preferences"
       title="Account Preferences"
-      description="Defaults for checkout and future notifications (notifications not active yet)."
+      description="Checkout defaults and notification channels."
     >
       {error && (
         <p className="text-sm text-red-400">Unable to load preferences. You can still save new settings below.</p>
@@ -124,14 +146,14 @@ export default function AccountPreferencesForm() {
         )}
 
         <fieldset className="space-y-3 border border-brand-500/10 rounded-xl p-4">
-          <legend className="text-sm text-slate-400 px-1">Future notifications (stored only)</legend>
+          <legend className="text-sm text-slate-400 px-1">Notifications</legend>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
               type="checkbox"
-              checked={form.marketingEmails}
-              onChange={(e) => setForm((f) => ({ ...f, marketingEmails: e.target.checked }))}
+              checked={form.emailNotifications}
+              onChange={(e) => setForm((f) => ({ ...f, emailNotifications: e.target.checked }))}
             />
-            Marketing emails
+            Email notifications
           </label>
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input
@@ -140,6 +162,30 @@ export default function AccountPreferencesForm() {
               onChange={(e) => setForm((f) => ({ ...f, smsNotifications: e.target.checked }))}
             />
             SMS notifications
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.orderUpdates}
+              onChange={(e) => setForm((f) => ({ ...f, orderUpdates: e.target.checked }))}
+            />
+            Order updates
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.paymentUpdates}
+              onChange={(e) => setForm((f) => ({ ...f, paymentUpdates: e.target.checked }))}
+            />
+            Payment updates
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={form.marketingEmails}
+              onChange={(e) => setForm((f) => ({ ...f, marketingEmails: e.target.checked }))}
+            />
+            Marketing emails
           </label>
         </fieldset>
 

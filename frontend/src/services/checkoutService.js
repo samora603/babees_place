@@ -58,9 +58,12 @@ export function resolveExpressFulfillment(evaluation, customerNote = null) {
  * @param {ReturnType<typeof evaluateExpressCheckout>} evaluation
  * @param {string | null} [customerNote]
  */
-export async function placeExpressOrder(userId, evaluation, customerNote = null) {
+export async function placeExpressOrder(userId, evaluation, customerNote = null, paymentMethod = 'cod') {
   const fulfillment = resolveExpressFulfillment(evaluation, customerNote);
-  return orderService.placeOrder(userId, fulfillment);
+  return orderService.placeOrder(userId, {
+    ...fulfillment,
+    paymentMethod: paymentMethod || 'cod',
+  });
 }
 
 export const checkoutService = {

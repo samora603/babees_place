@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { cartService } from '@/services/cartService';
 import { canCustomerCancel } from '@/utils/orderStatus';
 import { attachProfilesToOrders } from '@/services/profileLookup';
+import { notificationService } from '@/services/notificationService';
+import { NOTIFICATION_EVENTS } from '@/models/notification';
 
 /**
  * Order select without `profiles` embed.
@@ -62,6 +64,13 @@ export const mapOrder = (row) => {
     customerNote: row.customer_note || null,
     customerPhone: row.profiles?.phone || row.delivery_address?.phone || null,
     mpesaReceiptNumber: row.mpesa_receipt_number || null,
+    paymentMethod: row.payment_method || 'cod',
+    discountAmount: Number(row.discount_amount || 0),
+    couponCode: row.coupon_code || null,
+    loyaltyPointsRedeemed: row.loyalty_points_redeemed || 0,
+    giftCardAmount: Number(row.gift_card_amount || 0),
+    freeDelivery: Boolean(row.free_delivery),
+    promotionsApplied: row.promotions_applied || [],
     createdAt: row.created_at,
     created_at: row.created_at,
     note: row.note,
@@ -92,14 +101,57 @@ export const placeOrder = async (userId, fulfillment = {}) => {
     p_pickup_location_id: fulfillment.pickupLocationId || null,
     p_delivery_address: fulfillment.deliveryAddress || null,
     p_customer_note: fulfillment.customerNote || null,
+    p_payment_method: fulfillment.paymentMethod || 'cod',
+    p_coupon_code: fulfillment.couponCode || null,
+    p_loyalty_points: fulfillment.loyaltyPoints || 0,
+    p_gift_card_code: fulfillment.giftCardCode || null,
+    p_gift_card_amount: fulfillment.giftCardAmount || 0,
+    p_discount_amount: fulfillment.discountAmount || 0,
+    p_free_delivery: Boolean(fulfillment.freeDelivery),
+    p_promotions_applied: fulfillment.promotionsApplied || [],
+    p_referral_code: fulfillment.referralCode || null,
   });
   if (error) throw error;
-  return { order: { id: data } };
+
+  const orderId = data;
+  notificationService.emitSafe(NOTIFICATION_EVENTS.ORDER_CREATED, {
+    userId,
+    orderId,
+    email: fulfillment.email,
+    phone: fulfillment.phone,
+    name: fulfillment.name,
+    amount: fulfillment.amount,
+    currency: 'KES',
+    paymentMethod: fulfillment.paymentMethod || 'cod',
+  });
+  notificationService.emitSafe(NOTIFICATION_EVENTS.ADMIN_NEW_ORDER, {
+    orderId,
+    amount: fulfillment.amount,
+    currency: 'KES',
+    paymentMethod: fulfillment.paymentMethod || 'cod',
+    notifyAdmins: true,
+  });
+
+  return { order: { id: orderId } };
 };
 
 export const cancelOrder = async (orderId) => {
+  const { data: orderRow } = await supabase
+    .from('orders')
+    .select('id, user_id')
+    .eq('id', orderId)
+    .maybeSingle();
+
   const { error } = await supabase.rpc('cancel_order', { p_order_id: orderId });
   if (error) throw error;
+
+  if (orderRow?.user_id) {
+    notificationService.emitSafe(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
+      userId: orderRow.user_id,
+      orderId,
+    });
+  }
+
   return { success: true };
 };
 

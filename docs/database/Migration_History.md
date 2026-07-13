@@ -105,5 +105,10 @@ Forward migrations `002`–`010` are **authored and validated**; the following s
 | 12 | `012_inventory.sql` | Inventory tracking | No |
 | 13 | `013_order_fulfillment.sql` | Pickup locations, delivery JSONB, order events | No |
 | 14 | `014_customer_profile.sql` | Saved addresses + account preferences (WS5 M5.1) | No |
+| 15 | `015_recommendations.sql` | `get_bestseller_product_ids` RPC for storefront trending (WS5 M5.3) | No |
+| 16 | `016_payments.sql` | Payments + payment_events, order payment_method/receipt, finalize RPCs (WS6) | No |
+| 17 | `017_notifications.sql` | Notifications inbox, templates, deliveries, preferences, admin fan-out RPCs (WS7) | No |
+| 18 | `018_promotions_loyalty.sql` | Promotions, coupons, loyalty, gift cards, referrals; extended place_order (WS8) | No |
+| 19 | `019_operations.sql` | Admin audit logs + write_admin_audit RPC (WS9) | No |
 
 > **WS5 Milestone 5.2 (Faster Checkout)** — no new migration; uses `014` profile tables plus existing cart/order schema.

@@ -6,9 +6,29 @@ vi.mock('@/lib/supabaseClient', () => ({
   supabase: {
     rpc: (...args) => rpcMock(...args),
     from: () => ({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: {}, error: null }) }) }),
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: { id: 'order-1', user_id: 'u1' }, error: null }),
+          maybeSingle: () => Promise.resolve({ data: { id: 'order-1', user_id: 'u1' }, error: null }),
+        }),
+      }),
       update: () => ({ eq: () => ({ select: () => ({ single: () => Promise.resolve({ data: {}, error: null }) }) }) }),
     }),
+  },
+}));
+
+vi.mock('@/services/notificationService', () => ({
+  notificationService: {
+    emitSafe: vi.fn(() => Promise.resolve({})),
+  },
+}));
+
+vi.mock('@/services/auditService', () => ({
+  auditService: {
+    writeAuditSafe: vi.fn(() => Promise.resolve(null)),
+  },
+  AUDIT_ACTIONS: {
+    ORDER_UPDATED: 'order.updated',
   },
 }));
 

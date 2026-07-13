@@ -1,19 +1,26 @@
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   FiGrid, FiPackage, FiShoppingBag, FiUsers, FiBarChart2,
-  FiMapPin, FiSettings, FiLogOut, FiTag,
+  FiMapPin, FiSettings, FiLogOut, FiTag, FiBell, FiPercent, FiGift, FiAward, FiActivity,
 } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
 import { useAuth } from '@/context/AuthContext';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
   { to: '/admin/dashboard',        icon: FiGrid,       label: 'Command Center' },
   { to: '/admin/orders',           icon: FiShoppingBag,label: 'Acquisitions'   },
+  { to: '/admin/notifications',    icon: FiBell,       label: 'Alerts'         },
+  { to: '/admin/promotions',       icon: FiPercent,    label: 'Promotions'     },
+  { to: '/admin/coupons',          icon: FiTag,        label: 'Coupons'        },
+  { to: '/admin/gift-cards',       icon: FiGift,       label: 'Gift Cards'     },
+  { to: '/admin/loyalty',          icon: FiAward,      label: 'Loyalty'        },
   { to: '/admin/products',         icon: FiPackage,    label: 'Collection'     },
   { to: '/admin/categories',       icon: FiTag,        label: 'Categories'     },
   { to: '/admin/inventory',        icon: FiBarChart2,  label: 'Inventory'      },
   { to: '/admin/users',            icon: FiUsers,      label: 'Clients'        },
   { to: '/admin/pickup-locations', icon: FiMapPin,     label: 'Boutiques'      },
+  { to: '/admin/health',           icon: FiActivity,   label: 'Health'         },
   { to: '/admin/settings',         icon: FiSettings,   label: 'Preferences'    },
 ];
 
@@ -79,9 +86,12 @@ export default function AdminLayout() {
           <h1 className="font-display font-semibold text-lg text-white tracking-widest uppercase flex items-center gap-3">
              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span> Control Panel
           </h1>
-          <Link to="/" className="text-xs uppercase tracking-widest font-semibold text-slate-400 hover:text-brand-500 transition-colors flex items-center gap-2 group">
-             View Protocol <span className="group-hover:translate-x-1 transition-transform">→</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <NotificationBell to="/admin/notifications" audience="admin" label="Admin alerts" />
+            <Link to="/" className="text-xs uppercase tracking-widest font-semibold text-slate-400 hover:text-brand-500 transition-colors flex items-center gap-2 group">
+               View Protocol <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </Link>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto w-full">
            <div className="mx-auto max-w-7xl">
