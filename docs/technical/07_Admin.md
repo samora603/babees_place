@@ -12,7 +12,7 @@ Source of truth: `frontend/src/pages/admin/*`, `frontend/src/components/layout/{
 ## 2. Screens (routes under `/admin`)
 | Route | Page | Function | Backing |
 |---|---|---|---|
-| `/dashboard` | `AdminDashboard` | KPIs + 7-day revenue chart (recharts) | `adminService.getStats` |
+| `/dashboard` | `AdminDashboard` | KPI cards (revenue, orders, products, clients) | `analyticsService.getDashboardSnapshot` |
 | `/products` | `AdminProducts` | list/delete products | `products` |
 | `/products/new`, `/products/:id/edit` | `AdminProductForm` | create/update product, image upload | `products`, Storage `products` bucket |
 | `/orders`, `/orders/:id` | `AdminOrders`, `AdminOrderDetail` | list, view, update status | `orders`, `order_items`, `profiles` |
@@ -21,14 +21,9 @@ Source of truth: `frontend/src/pages/admin/*`, `frontend/src/components/layout/{
 | `/pickup-locations` | `AdminPickupLocations` | CRUD pickup locations | `pickup_locations` (unverified) |
 | `/settings` | `AdminSettings` | **placeholder only** ("Configuration Module Offline") | — |
 
-## 3. Service (`adminService`)
-- `getStats` — parallel counts (`head:true`) + client-side revenue aggregation (does not scale).
-- Orders: `getOrders`, `getOrder`, `updateOrderStatus`.
-- Users: `getUsers`, `updateUserRole`.
-- Products: `createProduct`, `updateProduct`, `deleteProduct`, `uploadImages`.
-- Categories: `createCategory`/`updateCategory`/`deleteCategory` → target a `categories` table that is **unverified** and contradicts the text-based `products.category` used elsewhere.
-- Inventory: `getInventory`, `getLowStock` (`stock < 5`), `updateStock`.
-- Pickup locations: full CRUD (table unverified).
+## 3. Services
+- **Analytics (`analyticsService`)** — `getDashboardSnapshot` for dashboard KPIs. See `docs/technical/11_Analytics.md`.
+- **Admin (`adminService`)** — orders (`getOrders`, `getOrder`, `updateOrderStatus`), users, products, inventory, pickup locations, categories.
 
 ## 4. Known issues (see audits)
 - `AdminSettings` is a non-functional placeholder.

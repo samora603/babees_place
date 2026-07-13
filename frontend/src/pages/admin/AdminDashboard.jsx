@@ -1,92 +1,240 @@
-import { useEffect, useState } from 'react';
-import { adminService } from '@/services/adminService';
-import { formatCurrency } from '@/utils/helpers';
-import { FiShoppingBag, FiPackage, FiUsers, FiDollarSign, FiAlertCircle } from 'react-icons/fi';
-import { GiBee } from 'react-icons/gi';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import Spinner from '@/components/ui/Spinner';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { analyticsService } from '@/services/analyticsService';
+import { isDashboardEmpty, kpisToCardValues } from '@/models/dashboard';
+import KPICard from '@/components/admin/dashboard/KPICard';
+import DashboardLoadingState from '@/components/admin/dashboard/DashboardLoadingState';
+import DashboardEmptyState from '@/components/admin/dashboard/DashboardEmptyState';
+import DashboardErrorState from '@/components/admin/dashboard/DashboardErrorState';
+import DashboardPageHeader from '@/components/admin/dashboard/DashboardPageHeader';
+import DashboardWidgetCard from '@/components/admin/dashboard/DashboardWidgetCard';
+import DashboardWidgetSkeleton from '@/components/admin/dashboard/DashboardWidgetSkeleton';
+import RevenueSummaryCard from '@/components/admin/dashboard/RevenueSummaryCard';
+import SalesSummaryCard from '@/components/admin/dashboard/SalesSummaryCard';
+import RecentOrdersWidget from '@/components/admin/dashboard/RecentOrdersWidget';
+import LowStockWidget from '@/components/admin/dashboard/LowStockWidget';
+import TopProductsWidget from '@/components/admin/dashboard/TopProductsWidget';
+import TopCategoriesWidget from '@/components/admin/dashboard/TopCategoriesWidget';
+import RecentActivityWidget from '@/components/admin/dashboard/RecentActivityWidget';
+
+const RevenueTrendChart = lazy(() => import('@/components/admin/dashboard/RevenueTrendChart'));
+const OrdersStatusChart = lazy(() => import('@/components/admin/dashboard/OrdersStatusChart'));
+const FulfillmentChart = lazy(() => import('@/components/admin/dashboard/FulfillmentChart'));
+const PaymentStatusChart = lazy(() => import('@/components/admin/dashboard/PaymentStatusChart'));
+
+function ChartSuspenseFallback({ title }) {
+  return (
+    <DashboardWidgetCard title={title}>
+      <DashboardWidgetSkeleton rows={6} />
+    </DashboardWidgetCard>
+  );
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(null);
+  const [snapshot, setSnapshot] = useState(null);
+  const [revenueSummary, setRevenueSummary] = useState(null);
+  const [salesSummary, setSalesSummary] = useState(null);
+  const [ordersByStatus, setOrdersByStatus] = useState([]);
+  const [ordersByFulfillment, setOrdersByFulfillment] = useState([]);
+  const [ordersByPayment, setOrdersByPayment] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [topCategories, setTopCategories] = useState([]);
+  const [activityEvents, setActivityEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [snapshotError, setSnapshotError] = useState(null);
+  const [revenueError, setRevenueError] = useState(null);
+  const [salesError, setSalesError] = useState(null);
+  const [statusChartError, setStatusChartError] = useState(null);
+  const [fulfillmentChartError, setFulfillmentChartError] = useState(null);
+  const [paymentChartError, setPaymentChartError] = useState(null);
+  const [ordersError, setOrdersError] = useState(null);
+  const [lowStockError, setLowStockError] = useState(null);
+  const [topProductsError, setTopProductsError] = useState(null);
+  const [topCategoriesError, setTopCategoriesError] = useState(null);
+  const [activityError, setActivityError] = useState(null);
 
-  useEffect(() => {
-    adminService.getStats().then(({ data }) => setStats(data.data)).finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    setLoading(true);
+    setSnapshotError(null);
+    setRevenueError(null);
+    setSalesError(null);
+    setStatusChartError(null);
+    setFulfillmentChartError(null);
+    setPaymentChartError(null);
+    setOrdersError(null);
+    setLowStockError(null);
+    setTopProductsError(null);
+    setTopCategoriesError(null);
+    setActivityError(null);
+
+    const [
+      snapshotResult,
+      revenueResult,
+      salesResult,
+      statusResult,
+      fulfillmentResult,
+      paymentResult,
+      ordersResult,
+      lowStockResult,
+      topProductsResult,
+      topCategoriesResult,
+      activityResult,
+    ] = await Promise.all([
+      analyticsService.getDashboardSnapshot(),
+      analyticsService.getRevenueSummary(),
+      analyticsService.getSalesSummary(),
+      analyticsService.getOrdersByStatus(),
+      analyticsService.getOrdersByFulfillment(),
+      analyticsService.getOrdersByPaymentStatus(),
+      analyticsService.getRecentOrders(10),
+      analyticsService.getLowStockProducts(),
+      analyticsService.getTopSellingProducts(10),
+      analyticsService.getTopCategories(10),
+      analyticsService.getDashboardActivity(15),
+    ]);
+
+    setSnapshot(snapshotResult.data);
+    setSnapshotError(snapshotResult.error || null);
+    setRevenueSummary(revenueResult.data);
+    setRevenueError(revenueResult.error || null);
+    setSalesSummary(salesResult.data);
+    setSalesError(salesResult.error || null);
+    setOrdersByStatus(statusResult.data);
+    setStatusChartError(statusResult.error || null);
+    setOrdersByFulfillment(fulfillmentResult.data);
+    setFulfillmentChartError(fulfillmentResult.error || null);
+    setOrdersByPayment(paymentResult.data);
+    setPaymentChartError(paymentResult.error || null);
+    setRecentOrders(ordersResult.data);
+    setOrdersError(ordersResult.error || null);
+    setLowStockProducts(lowStockResult.data);
+    setLowStockError(lowStockResult.error || null);
+    setTopProducts(topProductsResult.data);
+    setTopProductsError(topProductsResult.error || null);
+    setTopCategories(topCategoriesResult.data);
+    setTopCategoriesError(topCategoriesResult.error || null);
+    setActivityEvents(activityResult.data);
+    setActivityError(activityResult.error || null);
+    setLoading(false);
   }, []);
 
-  if (loading) return <div className="flex justify-center py-20 bg-[#0B0B0B] min-h-full"><Spinner size="lg" /></div>;
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const StatCard = ({ icon: Icon, label, value, colorClass = 'text-brand-500', bgClass = 'bg-brand-500/10' }) => (
-    <div className="bg-[#111] p-6 rounded-2xl border border-brand-500/10 shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center gap-5 hover:border-brand-500/30 transition-all duration-300 group relative overflow-hidden">
-      <div className="absolute -right-4 -top-4 w-20 h-20 bg-brand-500/5 rounded-full blur-[20px] pointer-events-none group-hover:bg-brand-500/10 transition-colors"></div>
-      <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${bgClass} border border-brand-500/20`}>
-        <Icon size={24} className={colorClass} />
-      </div>
-      <div className="relative z-10">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <p className={`font-display font-bold text-3xl tracking-wide ${colorClass}`}>{value}</p>
-      </div>
-    </div>
-  );
+  if (loading) return <DashboardLoadingState />;
+
+  const kpis = snapshot?.kpis;
+  const cards = kpis ? kpisToCardValues(kpis) : [];
+  const kpiSectionFailed = Boolean(snapshotError);
 
   return (
-    <div className="space-y-8 bg-[#0B0B0B] min-h-full text-slate-200">
-      <div className="flex items-center gap-4 border-b border-brand-500/20 pb-6 mb-8 relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[80px] pointer-events-none"></div>
-        <GiBee className="text-brand-500 text-4xl opacity-80" />
-        <div>
-          <h1 className="font-display font-bold text-3xl text-white tracking-wide uppercase">Command Center</h1>
-          <p className="text-sm text-slate-400 mt-1 font-light tracking-wide">Executive overview and analytics.</p>
-        </div>
-      </div>
+    <div className="space-y-8 bg-[#0B0B0B] min-h-full text-slate-200 p-6">
+      <DashboardPageHeader />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-  <StatCard icon={FiDollarSign} label="Total Revenue" value={formatCurrency(stats.totalRevenue ?? 0)} colorClass="text-brand-400" bgClass="bg-brand-500/10" />
-  <StatCard icon={FiShoppingBag} label="Total Orders"  value={(stats.totalOrders ?? 0).toLocaleString()} colorClass="text-brand-500" bgClass="bg-brand-500/5" />
-  <StatCard icon={FiPackage}     label="Products"      value={(stats.totalProducts ?? 0).toLocaleString()} colorClass="text-brand-500" bgClass="bg-brand-500/5" />
-  <StatCard icon={FiUsers}       label="Clients"     value={(stats.totalUsers ?? 0).toLocaleString()} colorClass="text-brand-500" bgClass="bg-brand-500/5" />
-      </div>
-
-      {/* Low stock alert */}
-      {stats.lowStockCount > 0 && (
-        <div className="flex items-center gap-4 bg-[#111] border border-brand-500/30 rounded-xl px-5 py-4 text-brand-300 text-sm shadow-[0_0_15px_rgba(212,175,55,0.1)]">
-          <FiAlertCircle className="text-brand-500 text-lg shrink-0" /> 
-          <span className="font-light tracking-wide">
-            Attention: <strong className="font-semibold text-brand-400">{stats.lowStockCount} piece{stats.lowStockCount > 1 ? 's' : ''}</strong> require inventory replenishment. Review the Inventory collection.
-          </span>
+      {kpiSectionFailed ? (
+        <DashboardErrorState
+          message={snapshotError?.message || 'Unable to load dashboard KPIs.'}
+          onRetry={load}
+        />
+      ) : kpis && isDashboardEmpty(kpis) ? (
+        <DashboardEmptyState />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {cards.map((kpi) => (
+            <KPICard key={kpi.key} kpi={kpi} />
+          ))}
         </div>
       )}
 
-      {/* Revenue chart */}
-      <div className="bg-[#111] p-8 rounded-2xl border border-brand-500/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
-        <h2 className="font-display font-semibold text-lg text-white uppercase tracking-widest mb-8 flex items-center gap-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span> Financial Performance (7 Days)
-        </h2>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={stats.revenueByDay}>
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(212,175,55,0.1)" vertical={false} />
-              <XAxis dataKey="_id" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={{ stroke: 'rgba(212,175,55,0.2)' }} tickLine={false} dy={10} />
-              <YAxis tickFormatter={(v) => `KES ${v.toLocaleString()}`} tick={{ fill: '#94a3b8', fontSize: 12 }} width={80} axisLine={{ stroke: 'rgba(212,175,55,0.2)' }} tickLine={false} dx={-10} />
-              <Tooltip 
-                contentStyle={{ background: '#0A0A0A', border: '1px solid rgba(212,175,55,0.3)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }} 
-                itemStyle={{ color: '#D4AF37', fontWeight: 600 }}
-                labelStyle={{ color: '#f1f5f9', marginBottom: 4 }} 
-                formatter={(v) => [formatCurrency(v), 'Revenue']} 
-                cursor={{ stroke: 'rgba(212,175,55,0.4)', strokeWidth: 1, strokeDasharray: '4 4' }}
-              />
-              <Area type="monotone" dataKey="revenue" stroke="#D4AF37" fill="url(#revenueGrad)" strokeWidth={3} activeDot={{ r: 6, fill: '#D4AF37', stroke: '#0B0B0B', strokeWidth: 2 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      <RevenueSummaryCard
+        summary={revenueSummary}
+        loading={false}
+        error={revenueError}
+        onRetry={load}
+      />
+
+      <Suspense fallback={<ChartSuspenseFallback title="Revenue Trend" />}>
+        <RevenueTrendChart
+          summary={revenueSummary}
+          loading={false}
+          error={revenueError}
+          onRetry={load}
+        />
+      </Suspense>
+
+      <SalesSummaryCard
+        summary={salesSummary}
+        loading={false}
+        error={salesError}
+        onRetry={load}
+      />
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Suspense fallback={<ChartSuspenseFallback title="Orders by Status" />}>
+          <OrdersStatusChart
+            statusCounts={ordersByStatus}
+            loading={false}
+            error={statusChartError}
+            onRetry={load}
+          />
+        </Suspense>
+        <Suspense fallback={<ChartSuspenseFallback title="Fulfillment Distribution" />}>
+          <FulfillmentChart
+            fulfillmentCounts={ordersByFulfillment}
+            loading={false}
+            error={fulfillmentChartError}
+            onRetry={load}
+          />
+        </Suspense>
       </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Suspense fallback={<ChartSuspenseFallback title="Payment Status" />}>
+          <PaymentStatusChart
+            paymentCounts={ordersByPayment}
+            loading={false}
+            error={paymentChartError}
+            onRetry={load}
+          />
+        </Suspense>
+        <TopCategoriesWidget
+          categories={topCategories}
+          loading={false}
+          error={topCategoriesError}
+          onRetry={load}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <RecentOrdersWidget
+          orders={recentOrders}
+          loading={false}
+          error={ordersError}
+          onRetry={load}
+        />
+        <LowStockWidget
+          products={lowStockProducts}
+          loading={false}
+          error={lowStockError}
+          onRetry={load}
+        />
+      </div>
+
+      <TopProductsWidget
+        products={topProducts}
+        loading={false}
+        error={topProductsError}
+        onRetry={load}
+      />
+
+      <RecentActivityWidget
+        events={activityEvents}
+        loading={false}
+        error={activityError}
+        onRetry={load}
+      />
     </div>
   );
 }
