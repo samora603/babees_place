@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main, master]
 
+# Placeholder public env for Vite (anon key is not a secret).
+# Real project credentials belong in hosting / GitHub Environment secrets for deploy.
+env:
+  VITE_SUPABASE_URL: https://example.supabase.co
+  VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  VITE_LOG_LEVEL: warn
+  VITE_ERROR_PROVIDER: console
+
 jobs:
   build-test:
     name: Lint, Test & Build
@@ -40,11 +48,6 @@ jobs:
         run: npm run test
 
       - name: Production build
-        env:
-          VITE_SUPABASE_URL: https://example.supabase.co
-          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
-          VITE_LOG_LEVEL: warn
-          VITE_ERROR_PROVIDER: console
         run: npm run build
 
       - name: Upload build artifact
