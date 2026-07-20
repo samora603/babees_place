@@ -42,6 +42,22 @@ Copy `frontend/.env.example` → `frontend/.env`:
 
 **Never set** `service_role` keys, M-Pesa passkeys, Resend/Twilio secrets in Vite env.
 
+### Vercel (production)
+
+Vite **inlines** `import.meta.env.VITE_*` at **build** time. Runtime dashboard env alone does not help after a bad build — names must be present when `npm run build` runs.
+
+1. **Root Directory:** `frontend` (not the monorepo root).
+2. **Environment Variables** (Production + Preview as needed) — exact names:
+
+   | Name | Value |
+   |---|---|
+   | `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | Supabase **anon** / publishable key only |
+
+3. Do **not** rely on `SUPABASE_URL` or `SUPABASE_ANON_KEY` without the `VITE_` prefix — the client will not see them and the app boots blank with `supabaseKey is required`.
+4. After changing env vars, **redeploy** (Rebuild) so Vite embeds the new values.
+5. SPA fallback: `frontend/vercel.json` rewrites all routes to `index.html`.
+
 ---
 
 ## Build

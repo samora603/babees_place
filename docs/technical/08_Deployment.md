@@ -16,7 +16,12 @@
 
 ## Env (public only)
 
-See `frontend/.env.example`. Required: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+See `frontend/.env.example`. Required (exact names everywhere — local, CI, Vercel):
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+On Vercel: Root Directory = `frontend`; set those names under Environment Variables; redeploy after changes. Non-`VITE_` names are not embedded in the client bundle.
 
 ## Pre-deploy
 
