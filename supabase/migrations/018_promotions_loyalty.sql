@@ -837,7 +837,7 @@ BEGIN
 
   SELECT * INTO v_rule FROM public.loyalty_rules WHERE is_active = true ORDER BY created_at ASC LIMIT 1;
   IF NOT FOUND THEN
-    v_points := floor(v_order.total * 0.01)::
+    v_points := floor(v_order.total * 0.01)::integer;
   ELSE
     v_points := floor(v_order.total * v_rule.earn_points_per_currency);
   END IF;
