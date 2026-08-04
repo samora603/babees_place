@@ -1,8 +1,8 @@
-import { ADDRESS_LABELS, EMPTY_ADDRESS_FORM } from '@/models/address';
+import { ADDRESS_LABELS } from '@/models/address';
 
 /**
  * @param {{
- *   form: typeof EMPTY_ADDRESS_FORM,
+ *   form: import('@/models/address').CustomerAddress | Record<string, unknown>,
  *   errors?: Record<string, string>,
  *   onChange: (field: string, value: string | boolean) => void,
  *   showDefaultToggle?: boolean,

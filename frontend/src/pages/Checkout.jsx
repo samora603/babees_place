@@ -47,6 +47,12 @@ export default function Checkout() {
   const [mpesaPhone, setMpesaPhone] = useState("");
   const [paymentStatusMessage, setPaymentStatusMessage] = useState("");
   const rewards = useCheckoutRewardsState();
+  const {
+    setPreview: setRewardsPreview,
+    appliedCouponCode: rewardsAppliedCoupon,
+    loyaltyPoints: rewardsLoyaltyPoints,
+    appliedGiftCardCode: rewardsAppliedGiftCard,
+  } = rewards;
   const [form, setForm] = useState({
     deliveryType: "pickup",
     pickupLocationId: "",
@@ -133,7 +139,7 @@ export default function Checkout() {
 
   const refreshRewardsPreview = useCallback(async () => {
     if (!cartLines.length) {
-      rewards.setPreview(null);
+      setRewardsPreview(null);
       return;
     }
     try {
@@ -142,20 +148,21 @@ export default function Checkout() {
         cartLines,
         userId: authUser?.id || user?.id,
         deliveryType: form.deliveryType,
-        couponCode: rewards.appliedCouponCode,
-        loyaltyPointsToRedeem: rewards.loyaltyPoints,
-        giftCardCode: rewards.appliedGiftCardCode,
+        couponCode: rewardsAppliedCoupon,
+        loyaltyPointsToRedeem: rewardsLoyaltyPoints,
+        giftCardCode: rewardsAppliedGiftCard,
       });
-      rewards.setPreview(preview);
+      setRewardsPreview(preview);
     } catch (err) {
       console.warn('rewards preview:', err);
     }
   }, [
     cartLines,
     form.deliveryType,
-    rewards.appliedCouponCode,
-    rewards.loyaltyPoints,
-    rewards.appliedGiftCardCode,
+    rewardsAppliedCoupon,
+    rewardsLoyaltyPoints,
+    rewardsAppliedGiftCard,
+    setRewardsPreview,
     user?.id,
   ]);
 

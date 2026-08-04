@@ -6,7 +6,6 @@ import {
   validatePreferencesInput,
   EMPTY_PREFERENCES,
 } from '@/models/preferences';
-import { mapAddressRow } from '@/models/address';
 
 async function getCurrentUserId() {
   const { data: { user }, error } = await supabase.auth.getUser();

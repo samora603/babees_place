@@ -40,6 +40,7 @@ jobs:
           test -f .env.example
           grep -q 'VITE_SUPABASE_URL' .env.example
           grep -q 'VITE_SUPABASE_ANON_KEY' .env.example
+          grep -q 'VITE_SITE_URL' .env.example
 
       - name: Lint
         run: npm run lint

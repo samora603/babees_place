@@ -1,7 +1,7 @@
 {
     "name": "babis-place-frontend",
     "private": true,
-    "version": "1.0.0",
+    "version": "1.0.0-rc.1",
     "type": "module",
     "engines": {
         "node": ">=18.18.0"

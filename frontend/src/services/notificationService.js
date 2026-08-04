@@ -4,7 +4,6 @@ import {
   mapDelivery,
   ADMIN_EVENTS,
   NOTIFICATION_EVENTS,
-  isOrderEvent,
   isPaymentEvent,
 } from '@/models/notification';
 import { renderBuiltinTemplate } from '@/services/templateService';

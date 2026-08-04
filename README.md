@@ -1,408 +1,236 @@
-# 🛍️ Babees Place
+# Babees Place
 
-> **A production-ready, secure, and scalable e-commerce platform built with React, Vite, Tailwind CSS, and Supabase.**
-
-![Status](https://img.shields.io/badge/Status-Active%20Development-blue)
+![Status](https://img.shields.io/badge/Status-v1.0.0--RC1-orange)
 ![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB)
 ![Backend](https://img.shields.io/badge/Backend-Supabase-3ECF8E)
-![Database](https://img.shields.io/badge/Database-PostgreSQL-blue)
+![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
----
+**Version:** [v1.0.0-RC1](./RELEASE_NOTES_v1.0.0-RC1.md) (`frontend@1.0.0-rc.1`)
 
-# 📖 About
-
-Babees Place is a modern e-commerce platform designed with a strong focus on:
-
-- Security
-- Scalability
-- Performance
-- Maintainability
-- Excellent user experience
-
-The project follows professional software engineering practices and is built using modern web technologies.
-
-Unlike many tutorial projects, Babees Place is intended to be production-ready and continuously improved using documented engineering standards.
+Campus-focused ecommerce storefront and admin console: catalog browsing, cart/checkout (COD + M-Pesa path), orders, rewards, and operations — backed by Supabase (Auth, Postgres, RLS, Storage).
 
 ---
 
-# 🎯 Project Goals
+## Overview
 
-- Build a secure shopping platform.
-- Provide an intuitive customer experience.
-- Deliver a powerful admin dashboard.
-- Maintain a scalable architecture.
-- Follow production-level engineering practices.
-- Document every major architectural decision.
-- Use AI-assisted engineering responsibly.
+Babees Place is a Kenya-oriented ecommerce application with:
 
----
+- A customer storefront (shop, wishlist, checkout, orders, rewards, notifications)
+- An admin console (catalog, inventory, orders, promotions, loyalty, analytics, health)
+- A PostgreSQL schema delivered as numbered Supabase migrations **001–019**
+- Demo seed + curated media tooling for portfolio and QA walkthroughs
 
-# ✨ Features
-
-## Customer
-
-- User Authentication
-- Product Browsing
-- Product Search
-- Product Categories
-- Shopping Cart
-- Wishlist
-- Checkout
-- Order History
-- User Profile
+This repository is at **Release Candidate 1** — feature-complete for candidate evaluation, not yet General Availability.
 
 ---
 
-## Admin
+## Features
 
-- Dashboard
-- Product Management
-- Category Management
-- Order Management
-- Customer Management
-- Inventory Management
-- Reports & Analytics
+### Customer
 
----
+- Auth (email/password), profile, addresses, preferences
+- Catalog browse, search, categories, featured / recommendations
+- Cart, wishlist, checkout (pickup & delivery), COD + M-Pesa payment UX
+- Orders, confirmation, payment status pages
+- Rewards / loyalty / gift-card UI surfaces
+- In-app notifications
 
-## Security
+### Admin
 
-- Supabase Authentication
-- Role-Based Authorization
-- Row Level Security (RLS)
-- Protected Routes
-- Secure Storage
-- Input Validation
+- Dashboard KPIs and charts
+- Products, categories, inventory, pickup locations
+- Orders and payment status updates
+- Promotions, coupons, gift cards, loyalty rules
+- Users, notifications, health, settings
 
----
+### Platform
 
-# 🛠 Technology Stack
-
-## Frontend
-
-- React
-- Vite
-- Tailwind CSS
-- React Router
+- Supabase Auth + RLS
+- Security headers on Vercel
+- Absolute SEO via `VITE_SITE_URL`
+- CI: lint → test → build
 
 ---
 
-## Backend
-
-- Supabase
-- PostgreSQL
-- Authentication
-- Storage
-- Row Level Security
-- Edge Functions (when required)
-
----
-
-## Development Tools
-
-- Cursor Pro
-- Git
-- GitHub
-- VS Code (optional)
-- npm
-
----
-
-# 📁 Project Structure
+## Architecture
 
 ```text
-babees_place/
-│
-├── frontend/        # React + Vite application
-│
-├── supabase/        # migrations + config (Supabase backend)
-│
-├── docs/            # engineering docs, technical refs, audits, architecture
-│
-├── README.md
-│
-└── .gitignore
+Browser (React SPA)
+    │  VITE_SUPABASE_URL + anon key
+    ▼
+Supabase
+  ├── Auth
+  ├── PostgREST (tables + RPCs)
+  ├── Storage (product uploads)
+  └── (optional) Edge Functions — M-Pesa / email / SMS
 ```
 
-> Note: `.github/` (CI/CD) and `scripts/` are **planned for Phase 1** and do not yet exist.
-> See `docs/architecture/Current_Project_Structure.md` for the full, current tree.
+- Storefront and admin share one SPA (`frontend/`), separated by route guards.
+- Business rules for checkout/inventory live primarily in Postgres RPCs (`place_order`, payment helpers, loyalty, etc.).
+- Migrations are the source of truth under `supabase/migrations/`.
+
+See also: `docs/01_ARCHITECTURE.md`, `docs/architecture/`.
 
 ---
 
-# 📚 Documentation
+## Tech Stack
 
-Project documentation is located inside:
-
-```text
-docs/
-```
-
-Key documents:
-
-- `docs/00_PROJECT_VISION.md`, `docs/PROJECT_MASTER_PLAN.md` — vision & plan
-- `docs/01_ARCHITECTURE.md`, `docs/architecture/Current_Project_Structure.md` — architecture
-- `docs/ENGINEERING.md`, `docs/13_CODING_STANDARDS.md` — standards
-- `docs/AI_COLLABORATION.md`, `docs/AUTOMATIONS.md`, `docs/DECISIONS.md` — process & ADRs
-- `docs/03_Security.md`, `docs/technical/*` — security & technical references
-- `docs/audits/*` — audit reports (project, security, frontend, database, supabase, performance, production readiness, Phase 0)
-- `docs/NEXT_STEPS.md` — engineering roadmap
-
-> Naming note: documentation uses the brand **"Babees Place"**, while some code artifacts still say **"Babis Place"** (e.g. `frontend/package.json` name, UI headings). This is a known inconsistency tracked in the Technical Debt Register; it is not yet reconciled to avoid rewriting working code during Phase 0.
+| Layer | Stack |
+|--------|--------|
+| Frontend | React 18, Vite 5, Tailwind CSS, React Router, Recharts, Swiper |
+| Backend | Supabase (PostgreSQL 17, Auth, Storage, RLS) |
+| Quality | ESLint, Prettier, Vitest, Playwright (opt-in), GitHub Actions |
+| Hosting | Vercel-oriented (`frontend/vercel.json`) |
 
 ---
 
-# 🚀 Getting Started
-
-## Clone Repository
+## Installation
 
 ```bash
 git clone git@github.com:samora603/babees_place.git
+cd babees_place/frontend
+npm ci
+cp .env.example .env   # then fill values
+npm run dev
 ```
 
----
-
-## Install Dependencies
+Quality commands (from `frontend/`):
 
 ```bash
-cd babees_place/frontend
+npm run lint
+npm test
+npm run build
+npm run test:e2e   # optional; requires Playwright browsers
+```
 
-npm install
+Demo catalog seed (service role; never commit the key):
+
+```bash
+export SUPABASE_URL="https://<project-ref>.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"
+npm run seed:demo
+# media-only refresh:
+node ../scripts/seed-demo/apply-media.mjs
 ```
 
 ---
 
 ## Environment Variables
 
-Create:
+| Name | Required | Purpose |
+|------|----------|---------|
+| `VITE_SUPABASE_URL` | Yes (prod build) | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Yes (prod build) | Public anon key only |
+| `VITE_SITE_URL` | Recommended | Absolute canonical / OG / sitemap / robots origin (no trailing slash) |
+| `VITE_PAYMENT_PROVIDER` | No | `mock` (default) or `daraja` |
+| `VITE_ENABLE_SW` | No | Service worker registration |
+
+Server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, Daraja keys, etc.) must **never** be placed in `VITE_*` or committed. See `frontend/.env.example`.
+
+Vercel: Root Directory = `frontend`; set the same `VITE_*` names for Production.
+
+---
+
+## Demo Accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@babeesplace.com` | `Admin123!` |
+| Customer | `customer@babeesplace.com` | `Customer123!` |
+| Other demo customers | `*@babeesplace.demo` | `DemoUser123!` |
+
+Accounts are created by the demo seed script when applied to a project.
+
+---
+
+## Screenshots
+
+Add storefront and admin captures under `docs/screenshots/` and link them here for portfolio demos:
+
+| Surface | Suggested file |
+|---------|----------------|
+| Home hero | `docs/screenshots/home-hero.png` |
+| Shop grid | `docs/screenshots/shop.png` |
+| Checkout | `docs/screenshots/checkout.png` |
+| Admin dashboard | `docs/screenshots/admin-dashboard.png` |
+
+*(RC1 ships without committed screenshot binaries; drop-in assets are welcome before GA.)*
+
+---
+
+## Deployment
+
+1. Apply Supabase migrations **001–019** (`supabase db push --linked`).
+2. Configure Production env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`.
+3. Deploy `frontend/` to Vercel (SPA rewrite + security headers in `vercel.json`).
+4. Smoke: Home → Shop → PDP → Login → Checkout COD → Admin orders.
+5. Optional: `npm run seed:demo` + `apply-media.mjs` for demo content.
+
+Details: `RELEASE_NOTES_v1.0.0-RC1.md`, `docs/operations/`.
+
+---
+
+## Roadmap
+
+**RC1 → GA (`v1.0.0`)**
+
+- Production domain + SEO verification
+- Live payment provider decision (mock vs Daraja)
+- Lighthouse / optional Playwright CI gate
+- Own-hosted catalog media (Storage/Cloudinary)
+
+**Later**
+
+- Richer product sitemap
+- Mobile app / deeper loyalty programs
+- Multi-vendor (out of current scope)
+
+---
+
+## Known Limitations
+
+- Live M-Pesa defaults to **mock** unless Edge/Daraja is configured
+- Checkout UI does not collect a **referral code** (signup/post-pay path)
+- COD does not create `payments` rows (by design)
+- Playwright smoke is **opt-in**, not a CI gate
+- Brand spelling varies (`Babees` docs vs `Babis` in some UI strings)
+- No product-level sitemap entries yet
+
+---
+
+## Project Layout
 
 ```text
-frontend/.env
-```
-
-Example:
-
-```env
-VITE_SUPABASE_URL=your-project-url
-
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-Never commit:
-
-- .env
-- Service Role Keys
-
----
-
-## Run Development Server
-
-```bash
-npm run dev
+babees_place/
+├── frontend/           # React + Vite SPA
+├── supabase/           # migrations + config
+├── scripts/seed-demo/  # demo users, catalog, media apply
+├── docs/               # engineering docs & audits
+├── CHANGELOG.md
+├── RELEASE_NOTES_v1.0.0-RC1.md
+└── README.md
 ```
 
 ---
 
-## Production Build
+## Documentation
 
-```bash
-npm run build
-```
-
----
-
-## Quality Scripts (Phase 1)
-
-All commands run from `frontend/`:
-
-```bash
-npm run lint          # ESLint (config: .eslintrc.cjs) — must pass with 0 errors
-npm run format        # Prettier write
-npm run format:check  # Prettier check (used in review)
-npm run test          # Vitest unit/component smoke tests
-npm run test:watch    # Vitest watch mode
-npm run test:e2e      # Playwright e2e (opt-in: needs `npx playwright install` + env)
-```
-
-CI runs `lint → test → build` on every push/PR via `.github/workflows/ci.yml`.
-
-To enable the pre-commit hook (lint-staged) once per clone:
-
-```bash
-git config core.hooksPath .husky
-```
+- Vision & plan: `docs/00_PROJECT_VISION.md`, `docs/PROJECT_MASTER_PLAN.md`
+- Architecture: `docs/01_ARCHITECTURE.md`
+- Security: `docs/03_Security.md`
+- Engineering: `docs/ENGINEERING.md`, `docs/13_CODING_STANDARDS.md`
+- Audits: `docs/audits/`
+- Release summary: `docs/RELEASE_SUMMARY_v1.0.0-RC1.md`
 
 ---
 
-# 🔐 Security Principles
+## License
 
-This project follows a security-first philosophy.
-
-Rules include:
-
-- Never expose secrets.
-- Never bypass authentication.
-- Never disable Row Level Security.
-- Validate all user input.
-- Follow least-privilege access.
-
-Every database table must use RLS.
+MIT — see [LICENSE](./LICENSE).
 
 ---
 
-# 🏗 Engineering Standards
+## Author
 
-Development follows documented engineering standards.
-
-Before implementing features:
-
-- Read documentation.
-- Review architecture.
-- Follow coding standards.
-- Update documentation.
-- Perform security review.
-
----
-
-# 🤖 AI-Assisted Development
-
-This project is designed for collaboration with AI engineering assistants.
-
-AI must:
-
-- Read project documentation before coding.
-- Preserve security.
-- Explain architectural changes.
-- Update documentation.
-- Avoid unnecessary complexity.
-
-AI should never weaken security to make code work.
-
----
-
-# 📋 Development Workflow
-
-Every feature follows the same lifecycle.
-
-```text
-Plan
-
-↓
-
-Review Existing Code
-
-↓
-
-Implement
-
-↓
-
-Review
-
-↓
-
-Test
-
-↓
-
-Document
-
-↓
-
-Commit
-
-↓
-
-Push
-```
-
----
-
-# 🧪 Testing
-
-Before every release verify:
-
-- Authentication
-- Authorization
-- Product Management
-- Shopping Cart
-- Checkout
-- Orders
-- Admin Dashboard
-- Database Security
-- Storage Access
-
----
-
-# 🚀 Deployment
-
-Before deployment ensure:
-
-- Production build passes.
-- Environment variables are configured.
-- Database migrations are applied.
-- RLS policies are verified.
-- Storage permissions are reviewed.
-- Documentation is up to date.
-
----
-
-# 📈 Roadmap
-
-Current development focuses on:
-
-- Authentication
-- Product Management
-- Shopping Experience
-- Orders
-- Payments
-- Admin Dashboard
-- Production Readiness
-
-Future improvements:
-
-- AI Recommendations
-- Mobile Application
-- Multi-Vendor Support
-- Analytics
-- Customer Loyalty
-- International Payments
-
----
-
-# 🤝 Contributing
-
-Contributions should follow the project's engineering documentation.
-
-Before submitting changes:
-
-- Follow coding standards.
-- Review security.
-- Update documentation.
-- Test thoroughly.
-
----
-
-# 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-# 👨‍💻 Project Owner
-
-**Edwin Samora**
-
-Software Engineer | AI Developer | Technology Entrepreneur
-
-GitHub:
-
-https://github.com/samora603
-
----
-
-# ⭐ Philosophy
-
-> Build software that is secure, maintainable, scalable, and ready for production.
-
-Every commit should leave the project better than it was before.
+**Edwin Samora** — [github.com/samora603](https://github.com/samora603)
