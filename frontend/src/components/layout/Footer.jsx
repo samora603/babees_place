@@ -21,9 +21,20 @@ export default function Footer() {
               Elevating the campus lifestyle. The finest collections curated for you, exclusively via M-Pesa.
             </p>
             <div className="flex gap-4">
-              {[FiInstagram, FiTwitter, FiFacebook].map((Icon, i) => (
-                <a key={i} href="#" className="w-10 h-10 rounded-full border border-brand-500/20 flex items-center justify-center text-brand-500 hover:bg-brand-500 hover:text-black hover:scale-110 hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-all duration-300">
-                  <Icon size={18} />
+              {[
+                { Icon: FiInstagram, href: 'https://instagram.com/Babis-Place', label: 'Instagram' },
+                { Icon: FiTwitter, href: 'https://x.com/babeesplace', label: 'X (Twitter)' },
+                { Icon: FiFacebook, href: 'https://facebook.com/babeesplace', label: 'Facebook' },
+              ].map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="w-10 h-10 rounded-full border border-brand-500/20 flex items-center justify-center text-brand-500 hover:bg-brand-500 hover:text-black hover:scale-110 hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+                >
+                  <Icon size={18} aria-hidden="true" />
                 </a>
               ))}
             </div>

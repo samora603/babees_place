@@ -121,18 +121,19 @@ export default function Hero() {
         <div className="flex justify-center gap-8">
 
           {[
-            { icon: FaInstagram, link: 'https://instagram.com/Babis-Place' },
-            { icon: FaTiktok, link: 'https://tiktok.com/@babiigatyou' },
-            { icon: FaWhatsapp, link: 'https://wa.me/254785098972' }
-          ].map((social, i) => (
+            { icon: FaInstagram, link: 'https://instagram.com/Babis-Place', label: 'Babees Place on Instagram' },
+            { icon: FaTiktok, link: 'https://tiktok.com/@babiigatyou', label: 'Babees Place on TikTok' },
+            { icon: FaWhatsapp, link: 'https://wa.me/254785098972', label: 'Chat on WhatsApp' },
+          ].map((social) => (
             <a
-              key={i}
+              key={social.label}
               href={social.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-500/70 hover:text-brand-500 hover:scale-125 transition-all"
+              aria-label={social.label}
+              className="text-brand-500/70 hover:text-brand-500 hover:scale-125 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 rounded"
             >
-              <social.icon size={24} />
+              <social.icon size={24} aria-hidden="true" />
             </a>
           ))}
 

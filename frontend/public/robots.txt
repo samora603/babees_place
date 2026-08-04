@@ -9,4 +9,5 @@ Disallow: /rewards
 Disallow: /notifications
 Disallow: /payment
 
+# Production builds overwrite this file with an absolute Sitemap URL when VITE_SITE_URL is set.
 Sitemap: /sitemap.xml

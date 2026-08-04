@@ -55,6 +55,9 @@ export default function Register() {
     }
   };
 
+  const fieldClass =
+    'w-full mt-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50';
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface text-white px-4">
       <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-8">
@@ -63,53 +66,75 @@ export default function Register() {
         </h2>
 
         <form onSubmit={handleRegister} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
-            required
-          />
+          <div>
+            <label htmlFor="register-name" className="text-sm text-slate-300">Full Name</label>
+            <input
+              id="register-name"
+              type="text"
+              autoComplete="name"
+              placeholder="Full Name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className={fieldClass}
+              required
+            />
+          </div>
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
-            autoComplete="email"
-            required
-          />
+          <div>
+            <label htmlFor="register-email" className="text-sm text-slate-300">Email</label>
+            <input
+              id="register-email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={fieldClass}
+              autoComplete="email"
+              required
+            />
+          </div>
 
-          <input
-            type="text"
-            placeholder="Phone (07XXXXXXXX)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
-            required
-          />
+          <div>
+            <label htmlFor="register-phone" className="text-sm text-slate-300">Phone</label>
+            <input
+              id="register-phone"
+              type="tel"
+              placeholder="Phone (07XXXXXXXX)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={fieldClass}
+              autoComplete="tel"
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
-            autoComplete="new-password"
-            required
-          />
+          <div>
+            <label htmlFor="register-password" className="text-sm text-slate-300">Password</label>
+            <input
+              id="register-password"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={fieldClass}
+              autoComplete="new-password"
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl"
-            autoComplete="new-password"
-            required
-          />
+          <div>
+            <label htmlFor="register-confirm" className="text-sm text-slate-300">Confirm Password</label>
+            <input
+              id="register-confirm"
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={fieldClass}
+              autoComplete="new-password"
+              required
+            />
+          </div>
 
           <Button type="submit" loading={loading} disabled={loading} className="w-full">
             Create Account

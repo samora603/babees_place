@@ -29,6 +29,12 @@ export default function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-[#0B0B0B] overflow-hidden text-slate-200">
+      <a
+        href="#admin-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-black"
+      >
+        Skip to content
+      </a>
       {/* Sidebar */}
       <aside className="w-72 bg-[#111] border-r border-brand-500/10 flex flex-col shrink-0 relative overflow-hidden shadow-[10px_0_30px_rgba(0,0,0,0.5)] z-20">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[80px] pointer-events-none"></div>
@@ -93,7 +99,7 @@ export default function AdminLayout() {
             </Link>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto w-full">
+        <main id="admin-main" className="flex-1 overflow-y-auto w-full" tabIndex={-1}>
            <div className="mx-auto max-w-7xl">
               <Outlet />
            </div>

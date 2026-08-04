@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { absoluteUrl, getSiteUrl } from '@/utils/siteUrl';
 
 const DEFAULTS = {
   siteName: 'Babees Place',
@@ -20,9 +21,8 @@ export default function SeoHead({
   jsonLd = null,
 }) {
   const location = useLocation();
-  const canonical = typeof window !== 'undefined'
-    ? `${window.location.origin}${location.pathname}`
-    : location.pathname;
+  const siteUrl = getSiteUrl();
+  const canonical = absoluteUrl(location.pathname || '/');
 
   useEffect(() => {
     const fullTitle = title
@@ -36,27 +36,41 @@ export default function SeoHead({
     setMeta('property', 'og:description', description);
     setMeta('property', 'og:type', type);
     setMeta('property', 'og:url', canonical);
-    setMeta('property', 'og:image', resolveUrl(image));
+    setMeta('property', 'og:image', absoluteUrl(image));
     setMeta('property', 'og:site_name', DEFAULTS.siteName);
     setMeta('name', 'twitter:card', 'summary_large_image');
     setMeta('name', 'twitter:title', fullTitle);
     setMeta('name', 'twitter:description', description);
-    setMeta('name', 'twitter:image', resolveUrl(image));
+    setMeta('name', 'twitter:image', absoluteUrl(image));
+    if (DEFAULTS.twitterHandle) {
+      setMeta('name', 'twitter:site', DEFAULTS.twitterHandle);
+    }
     setLink('canonical', canonical);
 
+    const defaultJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Store',
+      name: DEFAULTS.siteName,
+      description: DEFAULTS.description,
+      url: siteUrl || canonical,
+      currenciesAccepted: 'KES',
+      paymentAccepted: 'Cash, M-Pesa',
+    };
+
     let scriptEl = document.getElementById('seo-jsonld');
-    if (jsonLd) {
+    const payload = jsonLd || defaultJsonLd;
+    if (payload) {
       if (!scriptEl) {
         scriptEl = document.createElement('script');
         scriptEl.type = 'application/ld+json';
         scriptEl.id = 'seo-jsonld';
         document.head.appendChild(scriptEl);
       }
-      scriptEl.textContent = JSON.stringify(jsonLd);
+      scriptEl.textContent = JSON.stringify(payload);
     } else if (scriptEl) {
       scriptEl.remove();
     }
-  }, [title, description, image, type, noIndex, canonical, jsonLd]);
+  }, [title, description, image, type, noIndex, canonical, jsonLd, siteUrl]);
 
   return null;
 }
@@ -80,11 +94,4 @@ function setLink(rel, href) {
     document.head.appendChild(el);
   }
   el.setAttribute('href', href);
-}
-
-function resolveUrl(path) {
-  if (!path) return '';
-  if (/^https?:/i.test(path)) return path;
-  if (typeof window === 'undefined') return path;
-  return `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
 }

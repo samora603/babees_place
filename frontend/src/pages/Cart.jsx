@@ -90,7 +90,6 @@ export default function Cart() {
                 const price = getItemPrice(item);
                 const image = getItemImage(item);
                 const productLink = `/shop/${item.product_id}`;
-                const unitPrice = price;
                 const stock = product.stock ?? 0;
                 const inactive = product.is_active === false;
                 const atMax = Number(item.quantity) >= stock;
@@ -136,9 +135,9 @@ export default function Cart() {
                     <div className="flex items-end justify-between mt-auto pt-4 border-t border-brand-500/5">
                       <p className="font-display font-bold text-xl text-brand-400">{formatCurrency(price * item.quantity)}</p>
                       <div className="bg-[#0A0A0A] border border-brand-500/20 p-1 rounded-lg flex items-center gap-2">
-                        <button onClick={decrement} className="px-3 py-1 bg-surface-card rounded">-</button>
-                        <div className="px-3">{item.quantity}</div>
-                        <button onClick={increment} disabled={unavailable || atMax} className="px-3 py-1 bg-surface-card rounded disabled:opacity-40">+</button>
+                        <button type="button" onClick={decrement} className="px-3 py-1 bg-surface-card rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50" aria-label={`Decrease quantity of ${name}`}>-</button>
+                        <div className="px-3" aria-live="polite">{item.quantity}</div>
+                        <button type="button" onClick={increment} disabled={unavailable || atMax} className="px-3 py-1 bg-surface-card rounded disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50" aria-label={`Increase quantity of ${name}`}>+</button>
                       </div>
                     </div>
                   </div>

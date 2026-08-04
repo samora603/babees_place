@@ -57,16 +57,16 @@
     @apply bg-transparent border border-brand-500 hover:bg-brand-500/10 text-brand-500 hover:text-brand-400 font-semibold py-2.5 px-6 rounded-xl transition-all duration-300 active:scale-95 shadow-[0_0_10px_#D4AF371A] hover:shadow-[0_0_20px_#D4AF3733];
   }
 
+  .input {
+    @apply w-full bg-[#111] border border-surface-border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition-all duration-300;
+  }
+
   .btn-ghost {
-    @apply text-slate-300 hover:text-brand-500 hover:bg-brand-500/5 py-2 px-4 rounded-lg transition-all duration-300;
+    @apply text-slate-300 hover:text-brand-500 hover:bg-brand-500/5 py-2 px-4 rounded-lg transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40;
   }
 
   .card {
     @apply bg-surface-card border border-surface-border rounded-2xl shadow-xl transition-all duration-300 hover:border-brand-500/50 hover:shadow-[0_4px_30px_#D4AF371A];
-  }
-
-  .input {
-    @apply w-full bg-[#111] border border-surface-border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/50 transition-all duration-300;
   }
 
   .badge {

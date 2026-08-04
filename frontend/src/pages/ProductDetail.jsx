@@ -6,7 +6,7 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
 import { recentlyViewedService } from '@/services/recentlyViewedService';
 import { getImageAtIndex } from '@/utils/images';
-import { formatCurrency, getPrimaryImage } from '@/utils/helpers';
+import { formatCurrency, getPrimaryImage, resolveMediaUrl } from '@/utils/helpers';
 import { capQuantity, isOutOfStock } from '@/constants/inventory';
 import StarRating from '@/components/ui/StarRating';
 import QuantitySelector from '@/components/ui/QuantitySelector';
@@ -140,7 +140,11 @@ export default function ProductDetail() {
   };
 
   const galleryImages = Array.isArray(product.images) ? product.images : [];
-  const mainImageSrc = getImageAtIndex(galleryImages, activeImage);
+  const displayGallery = galleryImages.filter((img) => img.role !== 'thumb');
+  const visibleGallery = displayGallery.length ? displayGallery : galleryImages;
+  const safeIndex = Math.min(activeImage, Math.max(visibleGallery.length - 1, 0));
+  const activeImg = visibleGallery[safeIndex];
+  const mainImageSrc = resolveMediaUrl(activeImg?.url) || getImageAtIndex(visibleGallery, safeIndex);
 
   return (
     <div>
@@ -150,23 +154,31 @@ export default function ProductDetail() {
           <div className="aspect-square rounded-2xl overflow-hidden bg-surface-card border border-surface-border">
             <img
               src={mainImageSrc}
-              alt={product.name}
+              alt={activeImg?.alt || product.name}
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover"
             />
           </div>
-          {galleryImages.length > 1 && (
+          {visibleGallery.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
-              {galleryImages.map((img, i) => (
+              {visibleGallery.map((img, i) => (
                 <button
-                  key={i}
+                  key={img.path || img.url || i}
+                  type="button"
                   onClick={() => setActiveImage(i)}
-                  className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-colors ${
-                    i === activeImage ? 'border-brand-500' : 'border-surface-border'
+                  aria-label={img.alt || `${product.name} view ${i + 1}`}
+                  className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
+                    i === safeIndex ? 'border-brand-500' : 'border-surface-border'
                   }`}
                 >
-                  <img src={img.url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  <img
+                    src={resolveMediaUrl(img.url)}
+                    alt={img.alt || `${product.name} view ${i + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               ))}
             </div>

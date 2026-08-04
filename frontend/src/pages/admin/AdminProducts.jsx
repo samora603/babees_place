@@ -117,9 +117,9 @@ export default function AdminProducts() {
                           <FiExternalLink size={16} />
                         </Link>
                       )}
-                      <Link to={`/admin/products/${p.id}/edit`} className="btn-ghost p-1.5 text-slate-400 hover:text-white"><FiEdit2 size={16} /></Link>
-                      <button onClick={() => handleToggle(p.id, p.is_active)} className="btn-ghost p-1.5 text-slate-400 hover:text-brand-400"><FiPower size={16} /></button>
-                      <button onClick={() => setDeleteTarget(p)} className="btn-ghost p-1.5 text-slate-400 hover:text-red-400"><FiTrash2 size={16} /></button>
+                      <Link to={`/admin/products/${p.id}/edit`} className="btn-ghost p-1.5 text-slate-400 hover:text-white" aria-label={`Edit ${p.name}`}><FiEdit2 size={16} aria-hidden="true" /></Link>
+                      <button type="button" onClick={() => handleToggle(p.id, p.is_active)} className="btn-ghost p-1.5 text-slate-400 hover:text-brand-400" aria-label={p.is_active ? `Deactivate ${p.name}` : `Activate ${p.name}`}><FiPower size={16} aria-hidden="true" /></button>
+                      <button type="button" onClick={() => setDeleteTarget(p)} className="btn-ghost p-1.5 text-slate-400 hover:text-red-400" aria-label={`Delete ${p.name}`}><FiTrash2 size={16} aria-hidden="true" /></button>
                     </div>
                   </td>
                 </tr>

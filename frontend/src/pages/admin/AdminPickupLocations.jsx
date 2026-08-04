@@ -65,8 +65,8 @@ export default function AdminPickupLocations() {
                  <div className="w-10 h-10 rounded-xl bg-[#0A0A0A] border border-brand-500/20 flex items-center justify-center text-brand-500 group-hover:scale-110 transition-transform">
                     <FiMapPin size={18} />
                  </div>
-                 <button onClick={() => openEdit(loc)} className="w-8 h-8 rounded border border-transparent hover:border-brand-500/30 bg-surface-card hover:bg-[#0A0A0A] flex items-center justify-center text-slate-400 hover:text-white transition-all shadow-sm">
-                    <FiEdit2 size={14} />
+                 <button type="button" onClick={() => openEdit(loc)} className="w-8 h-8 rounded border border-transparent hover:border-brand-500/30 bg-surface-card hover:bg-[#0A0A0A] flex items-center justify-center text-slate-400 hover:text-white transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40" aria-label={`Edit ${loc.name}`}>
+                    <FiEdit2 size={14} aria-hidden="true" />
                  </button>
               </div>
               <h3 className="font-display font-bold text-lg text-white tracking-wide mb-1 group-hover:text-brand-400 transition-colors">{loc.name}</h3>

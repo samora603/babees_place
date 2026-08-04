@@ -53,7 +53,7 @@ export default function RecentActivityWidget({ events, loading = false, error = 
                 <button
                   type="button"
                   onClick={() => navigate(`/admin/orders/${event.orderId}`)}
-                  className="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-brand-500/5 transition-colors focus:outline-none focus:bg-brand-500/10"
+                  className="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-brand-500/5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus:bg-brand-500/10"
                 >
                   <span className="mt-0.5 w-8 h-8 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center shrink-0">
                     <Icon size={16} className="text-brand-400" aria-hidden />

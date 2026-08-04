@@ -55,7 +55,7 @@ export default function RecentOrdersWidget({ orders, loading = false, error = nu
                   tabIndex={0}
                   role="link"
                   aria-label={`View order ${order.orderNumber}`}
-                  className="border-b border-brand-500/5 hover:bg-brand-500/5 cursor-pointer transition-colors focus:outline-none focus:bg-brand-500/10"
+                  className="border-b border-brand-500/5 hover:bg-brand-500/5 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus:bg-brand-500/10"
                 >
                   <td className="py-3 pr-3 font-medium text-brand-400">{order.orderNumber}</td>
                   <td className="py-3 pr-3 text-slate-300">{order.customerName}</td>

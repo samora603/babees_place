@@ -33,9 +33,10 @@ export default function Navbar() {
           </Link>
 
           {/* Search bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md ml-8">
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md ml-8" role="search">
             <div className="relative w-full group">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
+              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" aria-hidden="true" />
+              <label htmlFor="navbar-search" className="sr-only">Search products</label>
               <input
                 type="search"
                 value={searchQuery}
@@ -43,6 +44,7 @@ export default function Navbar() {
                 placeholder="Search premium products..."
                 className="input pl-12 py-2.5 text-sm bg-surface-card/50 hover:bg-surface-card transition-colors duration-300"
                 id="navbar-search"
+                aria-label="Search products"
               />
             </div>
           </form>
@@ -56,21 +58,21 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-2 ml-4 border-l border-brand-500/20 pl-6">
                 <NotificationBell />
-                <NavLink to="/wishlist" className="btn-ghost relative hover:text-brand-400 group">
-                  <FiHeart size={20} className="group-hover:scale-110 transition-transform" />
+                <NavLink to="/wishlist" className="btn-ghost relative hover:text-brand-400 group" aria-label="Wishlist">
+                  <FiHeart size={20} className="group-hover:scale-110 transition-transform" aria-hidden="true" />
                 </NavLink>
-                <NavLink to="/cart" className="btn-ghost relative hover:text-brand-400 group">
-                  <FiShoppingCart size={20} className="group-hover:scale-110 transition-transform" />
+                <NavLink to="/cart" className="btn-ghost relative hover:text-brand-400 group" aria-label={itemCount > 0 ? `Cart, ${itemCount} items` : 'Cart'}>
+                  <FiShoppingCart size={20} className="group-hover:scale-110 transition-transform" aria-hidden="true" />
                   {itemCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-brand-500 text-black text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-[0_0_10px_rgba(212,175,55,0.5)]">
+                    <span className="absolute -top-1.5 -right-1.5 bg-brand-500 text-black text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow-[0_0_10px_rgba(212,175,55,0.5)]" aria-hidden="true">
                       {itemCount > 9 ? '9+' : itemCount}
                     </span>
                   )}
                 </NavLink>
                 <div className="relative group ml-2">
-                  <button className="flex items-center gap-2 pl-4 py-2 text-sm font-medium text-slate-300 hover:text-brand-400 transition-colors">
+                  <button type="button" className="flex items-center gap-2 pl-4 py-2 text-sm font-medium text-slate-300 hover:text-brand-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-lg" aria-label="Account menu" aria-haspopup="menu">
                     <div className="w-8 h-8 rounded-full bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-500 group-hover:bg-brand-500 group-hover:text-black transition-all">
-                       <FiUser size={16} />
+                       <FiUser size={16} aria-hidden="true" />
                     </div>
                     <span className="hidden lg:block">{profile?.full_name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Account'}</span>
                   </button>
@@ -99,22 +101,26 @@ export default function Navbar() {
           {/* Mobile menu toggle */}
           <button
             id="mobile-menu-btn"
-            className="md:hidden text-slate-300 hover:text-brand-400 p-2"
+            type="button"
+            className="md:hidden text-slate-300 hover:text-brand-400 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-lg"
             onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav-menu"
           >
-            {menuOpen ? <FiX size={26} /> : <FiMenu size={26} />}
+            {menuOpen ? <FiX size={26} aria-hidden="true" /> : <FiMenu size={26} aria-hidden="true" />}
           </button>
         </div>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#0B0B0B] border-t border-brand-500/20 px-4 py-6 space-y-4 animate-slide-up h-screen">
-          <form onSubmit={handleSearch}>
+        <div id="mobile-nav-menu" className="md:hidden bg-[#0B0B0B] border-t border-brand-500/20 px-4 py-6 space-y-4 animate-slide-up h-screen" role="navigation" aria-label="Mobile">
+          <form onSubmit={handleSearch} role="search">
             <div className="relative">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500" />
-              <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search premium items…" className="input pl-12 py-3 text-sm bg-surface-card/80" />
+              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500" aria-hidden="true" />
+              <label htmlFor="navbar-search-mobile" className="sr-only">Search products</label>
+              <input id="navbar-search-mobile" type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search premium items…" className="input pl-12 py-3 text-sm bg-surface-card/80" aria-label="Search products" />
             </div>
           </form>
           <div className="space-y-2 pt-4">

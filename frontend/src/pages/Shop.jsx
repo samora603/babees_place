@@ -59,18 +59,18 @@ export default function Shop() {
             
             <div className="space-y-6">
               <div>
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Search Item</label>
+                <label htmlFor="shop-search" className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Search Item</label>
                 <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="input text-sm py-2.5 bg-surface-card/60 border-brand-500/20 focus:border-brand-500/50 transition-colors" id="shop-search" />
               </div>
               <div>
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Category</label>
+                <label htmlFor="shop-category" className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Category</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="input text-sm py-2.5 bg-surface-card/60 border-brand-500/20 focus:border-brand-500/50 text-slate-300 appearance-none" id="shop-category">
                   <option value="">All Categories</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Sort By</label>
+                <label htmlFor="shop-sort" className="text-[10px] font-semibold uppercase tracking-widest text-brand-500/80 mb-3 block">Sort By</label>
                 <select value={sort} onChange={(e) => setSort(e.target.value)} className="input text-sm py-2.5 bg-surface-card/60 border-brand-500/20 focus:border-brand-500/50 text-slate-300 appearance-none" id="shop-sort">
                   {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
