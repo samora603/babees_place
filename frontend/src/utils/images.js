@@ -30,6 +30,8 @@ export function normalizeGalleryImages(images = []) {
       url: img.url,
       path: img.path || null,
       isPrimary: !!img.isPrimary || (i === 0 && !images.some((x) => x.isPrimary)),
+      alt: img.alt || null,
+      role: img.role || null,
     }));
 }
 
@@ -56,9 +58,11 @@ export function mergeUploadedImages(existing = [], uploaded = []) {
   return normalizeGalleryImages([...base, ...added]);
 }
 
+import { resolveMediaUrl } from '@/utils/helpers';
+
 export function getImageAtIndex(images = [], index = 0) {
   const list = normalizeGalleryImages(images);
   if (!list.length) return '/placeholder.png';
   const safe = Math.min(Math.max(0, index), list.length - 1);
-  return list[safe]?.url || '/placeholder.png';
+  return resolveMediaUrl(list[safe]?.url);
 }

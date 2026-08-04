@@ -29,13 +29,18 @@ describe('truncate', () => {
 });
 
 describe('getPrimaryImage', () => {
-  it('prefers the primary image', () => {
+  it('prefers the primary image and resolves relative paths', () => {
     const images = [{ url: 'a.png' }, { url: 'b.png', isPrimary: true }];
-    expect(getPrimaryImage(images)).toBe('b.png');
+    expect(getPrimaryImage(images)).toBe('/b.png');
   });
 
   it('falls back to the first image', () => {
-    expect(getPrimaryImage([{ url: 'a.png' }])).toBe('a.png');
+    expect(getPrimaryImage([{ url: 'a.png' }])).toBe('/a.png');
+  });
+
+  it('keeps absolute https URLs intact', () => {
+    expect(getPrimaryImage([{ url: 'https://cdn.example/p.jpg', isPrimary: true }]))
+      .toBe('https://cdn.example/p.jpg');
   });
 
   it('falls back to the placeholder when empty', () => {

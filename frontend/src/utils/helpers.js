@@ -35,11 +35,26 @@ export const formatDateTime = (dateStr) =>
     });
 
 /**
+ * Resolve product / media URLs for <img src>.
+ * Supports absolute https, root-relative, and legacy relative seed paths.
+ */
+export const resolveMediaUrl = (url) => {
+    if (!url || typeof url !== 'string') return '/placeholder.png';
+    const trimmed = url.trim();
+    if (!trimmed) return '/placeholder.png';
+    if (/^(https?:)?\/\//i.test(trimmed) || trimmed.startsWith('data:')) return trimmed;
+    if (trimmed.startsWith('/')) return trimmed;
+    return `/${trimmed}`;
+};
+
+/**
  * Get first image URL from a product's images array
  */
-export const getPrimaryImage = (images = []) =>
-    images.find((img) => img.isPrimary)?.url || images[0]?.url || '/placeholder.png';
-
+export const getPrimaryImage = (images = []) => {
+    const raw =
+        images.find((img) => img.isPrimary)?.url || images[0]?.url || null;
+    return resolveMediaUrl(raw);
+};
 /**
  * Calculate discount percentage
  */

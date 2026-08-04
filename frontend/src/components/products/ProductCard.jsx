@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiHeart, FiShoppingCart, FiStar } from 'react-icons/fi';
-import { formatCurrency, getPrimaryImage, discountPercent } from '@/utils/helpers';
+import { formatCurrency, getPrimaryImage, discountPercent, resolveMediaUrl } from '@/utils/helpers';
 import { isOutOfStock, isLowStock } from '@/constants/inventory';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -15,7 +15,9 @@ export default function ProductCard({ product }) {
   const [adding, setAdding] = useState(false);
 
   const productId = product.id || product._id || product.product_id;
-  const image = getPrimaryImage(product.images) || product.image_url || '/placeholder.png';
+  const image = product.images?.length
+    ? getPrimaryImage(product.images)
+    : resolveMediaUrl(product.image_url);
   const wishlisted = isWishlisted(productId);
   const hasDiscount = product.discount_price && product.discount_price < product.price;
   const discount = hasDiscount ? discountPercent(product.price, product.discount_price) : 0;

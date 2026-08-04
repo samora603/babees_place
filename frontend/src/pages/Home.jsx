@@ -132,18 +132,33 @@ export default function Home() {
           <div className="flex flex-col items-center mb-8">
             <GiBee className="text-brand-500 text-3xl mb-2" />
             <h2 className="text-2xl font-bold uppercase">Categories</h2>
+            <p className="text-gray-400 text-sm mt-2">Shop by collection</p>
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-center">
-            {categories.map((cat) => (
-              <Link
-                key={cat.id || cat.name}
-                to={`/shop?category=${cat.id}`}
-                className="px-4 py-2 bg-[#111] border border-gray-700 rounded-full text-sm hover:bg-brand-500 hover:text-black transition"
-              >
-                {cat.name}
-              </Link>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((cat) => {
+              const slug = cat.slug || String(cat.name || '').toLowerCase().replace(/\s+/g, '-');
+              const banner = `/category_banners/${slug}.jpg`;
+              return (
+                <Link
+                  key={cat.id || cat.name}
+                  to={`/shop?category=${cat.id}`}
+                  className="group relative aspect-[16/9] overflow-hidden rounded-xl border border-gray-800 bg-[#111]"
+                >
+                  <img
+                    src={banner}
+                    alt={`${cat.name} collection`}
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover opacity-80 transition duration-500 group-hover:scale-105 group-hover:opacity-100"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <span className="absolute bottom-4 left-4 font-display text-lg font-semibold text-white tracking-wide">
+                    {cat.name}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

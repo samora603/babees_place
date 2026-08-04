@@ -85,7 +85,7 @@ describe('mergeUploadedImages', () => {
 describe('getImageAtIndex', () => {
   it('returns image at active index', () => {
     const images = [{ url: 'a.png' }, { url: 'b.png' }];
-    expect(getImageAtIndex(images, 1)).toBe('b.png');
+    expect(getImageAtIndex(images, 1)).toBe('/b.png');
   });
 
   it('falls back to placeholder when empty', () => {

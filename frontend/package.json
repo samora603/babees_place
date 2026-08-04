@@ -15,7 +15,8 @@
         "format:check": "prettier --check .",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:e2e": "playwright test"
+        "test:e2e": "playwright test",
+        "seed:demo": "node ../scripts/seed-demo/index.mjs"
     },
     "lint-staged": {
         "*.{js,jsx}": [
