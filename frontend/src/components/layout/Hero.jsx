@@ -84,7 +84,7 @@ export default function Hero() {
         </p>
 
         <p className="text-slate-300 text-md md:text-lg max-w-2xl mx-auto mb-8 italic opacity-90">
-          Swipe to thrift and complete acquisition seamlessly through M-Pesa.
+          Swipe to thrift and checkout with payment on delivery — pay when you pick up or receive your order.
         </p>
 
         {/* DELIVERY BADGE */}

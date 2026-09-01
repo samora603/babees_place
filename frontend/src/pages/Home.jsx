@@ -8,6 +8,7 @@ import { productService } from '@/services/productService';
 import ProductGrid from '@/components/products/ProductGrid';
 import Hero from '@/components/layout/Hero';
 import RecommendationSkeleton from '@/components/recommendations/RecommendationSkeleton';
+import Button from '@/components/ui/Button';
 
 const HomeDiscoverSections = lazy(() =>
   import('@/components/recommendations/HomeDiscoverSections'),
@@ -19,6 +20,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [usingFallback, setUsingFallback] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -72,7 +74,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [retryToken]);
 
   if (loading) {
     return (
@@ -84,8 +86,11 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-amber-300">
-        {error}
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
+        <p className="text-amber-300">{error}</p>
+        <Button variant="secondary" onClick={() => setRetryToken((token) => token + 1)}>
+          Retry
+        </Button>
       </div>
     );
   }

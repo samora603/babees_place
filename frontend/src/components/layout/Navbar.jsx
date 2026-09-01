@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { FiShoppingCart, FiHeart, FiSearch, FiUser, FiMenu, FiX } from 'react-icons/fi';
 import { GiBee } from 'react-icons/gi';
@@ -10,15 +10,24 @@ export default function Navbar() {
   const { user, profile, logout } = useAuth();
   const { itemCount } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-    }
+    const q = searchQuery.trim();
+    // Preserve existing shop filters (category, sort, price) when searching from the header.
+    const params = location.pathname.startsWith('/shop')
+      ? new URLSearchParams(location.search)
+      : new URLSearchParams();
+    if (q) params.set('search', q);
+    else params.delete('search');
+    params.delete('page');
+    const qs = params.toString();
+    navigate(qs ? `/shop?${qs}` : '/shop');
+    setSearchQuery('');
+    setMenuOpen(false);
   };
 
   return (
@@ -35,17 +44,23 @@ export default function Navbar() {
           {/* Search bar */}
           <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md ml-8" role="search">
             <div className="relative w-full group">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" aria-hidden="true" />
               <label htmlFor="navbar-search" className="sr-only">Search products</label>
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search premium products..."
-                className="input pl-12 py-2.5 text-sm bg-surface-card/50 hover:bg-surface-card transition-colors duration-300"
+                className="input w-full pl-4 pr-12 py-2.5 text-sm bg-surface-card/50 hover:bg-surface-card transition-colors duration-300"
                 id="navbar-search"
                 aria-label="Search products"
               />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-lg transition-colors"
+                aria-label="Submit search"
+              >
+                <FiSearch size={18} aria-hidden="true" />
+              </button>
             </div>
           </form>
 
@@ -118,9 +133,23 @@ export default function Navbar() {
         <div id="mobile-nav-menu" className="md:hidden bg-[#0B0B0B] border-t border-brand-500/20 px-4 py-6 space-y-4 animate-slide-up h-screen" role="navigation" aria-label="Mobile">
           <form onSubmit={handleSearch} role="search">
             <div className="relative">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-500" aria-hidden="true" />
               <label htmlFor="navbar-search-mobile" className="sr-only">Search products</label>
-              <input id="navbar-search-mobile" type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search premium items…" className="input pl-12 py-3 text-sm bg-surface-card/80" aria-label="Search products" />
+              <input
+                id="navbar-search-mobile"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search premium items…"
+                className="input w-full pl-4 pr-12 py-3 text-sm bg-surface-card/80"
+                aria-label="Search products"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-brand-500 hover:text-brand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-lg transition-colors"
+                aria-label="Submit search"
+              >
+                <FiSearch size={18} aria-hidden="true" />
+              </button>
             </div>
           </form>
           <div className="space-y-2 pt-4">

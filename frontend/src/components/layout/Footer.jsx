@@ -18,7 +18,7 @@ export default function Footer() {
               <span className="text-white font-light">Place</span>
             </Link>
             <p className="text-slate-400 text-sm leading-relaxed mb-6 font-light">
-              Elevating the campus lifestyle. The finest collections curated for you, exclusively via M-Pesa.
+              Elevating the campus lifestyle. The finest collections curated for you — checkout with payment on delivery.
             </p>
             <div className="flex gap-4">
               {[
@@ -82,7 +82,7 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-3">
                  <span className="text-brand-500 mt-1">✧</span>
-                 <span>Secure M-Pesa Integration</span>
+                 <span>Secure Payment on Delivery</span>
               </li>
             </ul>
           </div>

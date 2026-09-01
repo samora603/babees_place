@@ -14,6 +14,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import RecommendationSkeleton from '@/components/recommendations/RecommendationSkeleton';
 import toast from 'react-hot-toast';
 import { FiHeart, FiShoppingCart } from 'react-icons/fi';
+import Button from '@/components/ui/Button';
 
 const YouMayAlsoLike = lazy(() =>
   import('@/components/recommendations/YouMayAlsoLike'),
@@ -35,6 +36,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariation, setSelectedVariation] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -62,7 +64,7 @@ export default function ProductDetail() {
     return () => {
       mounted = false;
     };
-  }, [idOrSlug]);
+  }, [idOrSlug, retryToken]);
 
   if (loading) {
     return (
@@ -97,8 +99,11 @@ export default function ProductDetail() {
 
   if (error) {
     return (
-      <div className="section-container py-20 text-center text-red-400">
-        Error loading product.
+      <div className="section-container py-20 text-center space-y-4">
+        <p className="text-red-400">We couldn&apos;t load this product right now. Please try again.</p>
+        <Button variant="secondary" onClick={() => setRetryToken((token) => token + 1)}>
+          Retry
+        </Button>
       </div>
     );
   }

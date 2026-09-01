@@ -3,13 +3,86 @@ import { isUuid } from '@/utils/slug';
 
 const PRODUCT_SELECT = '*, categories (id, name, slug)';
 
+/**
+ * Escape characters that are special in Postgres ILIKE patterns and PostgREST `.or()` filters.
+ * @param {string} raw
+ * @returns {string}
+ */
+export function escapeIlikePattern(raw) {
+  return String(raw ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+    .replace(/,/g, ' ')
+    .replace(/[()]/g, '')
+    .trim();
+}
+
+/**
+ * Build a PostgREST `.or()` filter for storefront product search.
+ * Searches name + description (case-insensitive partial match).
+ * Category name matching is handled separately via category_id IN (...).
+ * Brand/SKU: not present on the products schema — intentionally omitted.
+ *
+ * @param {string} search
+ * @param {string[]} [categoryIds]
+ * @returns {string|null}
+ */
+export function buildProductSearchOrFilter(search, categoryIds = []) {
+  const pattern = escapeIlikePattern(search);
+  if (!pattern) return null;
+
+  const clauses = [
+    `name.ilike.%${pattern}%`,
+    `description.ilike.%${pattern}%`,
+  ];
+
+  const ids = (categoryIds || []).filter(Boolean);
+  if (ids.length > 0) {
+    clauses.push(`category_id.in.(${ids.join(',')})`);
+  }
+
+  return clauses.join(',');
+}
+
+/**
+ * Resolve category IDs whose names partially match the search term.
+ * @param {string} search
+ * @returns {Promise<string[]>}
+ */
+async function findCategoryIdsMatchingSearch(search) {
+  const pattern = escapeIlikePattern(search);
+  if (!pattern) return [];
+
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id')
+    .ilike('name', `%${pattern}%`);
+
+  if (error) {
+    console.error('productService category search error:', error);
+    return [];
+  }
+
+  return (data || []).map((row) => row.id).filter(Boolean);
+}
+
 export const productService = {
   getProducts: async (params = {}) => {
     try {
       let query = supabase
         .from('products')
         .select(PRODUCT_SELECT, { count: 'exact' });
-      if (params.search) query = query.ilike('name', `%${params.search}%`);
+
+      const searchTerm = typeof params.search === 'string' ? params.search.trim() : '';
+      if (searchTerm) {
+        const matchedCategoryIds = await findCategoryIdsMatchingSearch(searchTerm);
+        const orFilter = buildProductSearchOrFilter(searchTerm, matchedCategoryIds);
+        if (orFilter) {
+          query = query.or(orFilter);
+        }
+      }
+
       if (params.category) query = query.eq('category_id', params.category);
       if (params.minPrice) query = query.gte('price', Number(params.minPrice));
       if (params.maxPrice) query = query.lte('price', Number(params.maxPrice));
@@ -36,7 +109,7 @@ export const productService = {
       const { data, error, count } = await query;
       if (error) {
         console.error('productService.getProducts error:', error);
-        return { data: { data: [], total: 0, pages: 1 }, error: null };
+        return { data: { data: [], total: 0, pages: 1 }, error };
       }
       const total = count ?? (Array.isArray(data) ? data.length : 0);
       const limit = Number(params.limit) || total || 1;
@@ -44,7 +117,7 @@ export const productService = {
       return { data: { data: Array.isArray(data) ? data : [], total, pages }, error: null };
     } catch (err) {
       console.error('productService.getProducts exception:', err);
-      return { data: { data: [], total: 0, pages: 1 }, error: null };
+      return { data: { data: [], total: 0, pages: 1 }, error: err };
     }
   },
 
@@ -53,12 +126,12 @@ export const productService = {
       const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('id', id).maybeSingle();
       if (error) {
         console.error('productService.getProductById error:', error);
-        return { data: { data: null }, error: null };
+        return { data: { data: null }, error };
       }
       return { data: { data }, error: null };
     } catch (err) {
       console.error('productService.getProductById exception:', err);
-      return { data: { data: null }, error: null };
+      return { data: { data: null }, error: err };
     }
   },
 

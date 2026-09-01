@@ -4,7 +4,7 @@ import { absoluteUrl, getSiteUrl } from '@/utils/siteUrl';
 
 const DEFAULTS = {
   siteName: 'Babees Place',
-  description: 'Babees Place — premium campus ecommerce. Browse, checkout, and pay with M-Pesa or cash on delivery.',
+  description: 'Babees Place — premium campus ecommerce. Browse, checkout, and pay on delivery when your order arrives.',
   image: '/og-image.png',
   twitterHandle: '@babeesplace',
 };
@@ -54,7 +54,7 @@ export default function SeoHead({
       description: DEFAULTS.description,
       url: siteUrl || canonical,
       currenciesAccepted: 'KES',
-      paymentAccepted: 'Cash, M-Pesa',
+      paymentAccepted: 'Cash on Delivery',
     };
 
     let scriptEl = document.getElementById('seo-jsonld');
