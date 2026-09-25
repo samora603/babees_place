@@ -40,18 +40,12 @@ describe('payment model', () => {
     expect(latest.id).toBe('b');
   });
 
-  it('canRetryPayment allows failed mpesa and blocks paid / active', () => {
+  it('canRetryPayment is disabled — Payment on Delivery only', () => {
     expect(canRetryPayment({ status: 'pending', paymentStatus: 'paid', paymentMethod: 'mpesa' })).toBe(false);
     expect(
       canRetryPayment(
         { status: 'pending', paymentStatus: 'failed', paymentMethod: 'mpesa' },
         { status: 'failed', method: 'mpesa' },
-      ),
-    ).toBe(true);
-    expect(
-      canRetryPayment(
-        { status: 'pending', paymentStatus: 'pending', paymentMethod: 'mpesa' },
-        { status: 'initiated', method: 'mpesa' },
       ),
     ).toBe(false);
     expect(canRetryPayment({ status: 'pending', paymentStatus: 'pending', paymentMethod: 'cod' })).toBe(false);

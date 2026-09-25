@@ -20,6 +20,8 @@ build/
 .env
 .env.*
 !.env.example
+!**/.env.example
+supabase/functions/.env
 *.key
 *.pem
 signing_keys.json

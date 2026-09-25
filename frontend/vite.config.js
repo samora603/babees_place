@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
     },
     build: {
-      sourcemap: true,
+      sourcemap: mode !== 'production',
       chunkSizeWarningLimit: 700,
       rollupOptions: {
         output: {

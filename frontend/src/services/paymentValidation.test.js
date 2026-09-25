@@ -17,23 +17,22 @@ describe('paymentValidation', () => {
     expect(normalizeMpesaPhone('0812345678').ok).toBe(false);
   });
 
-  it('validatePaymentMethod blocks disabled methods', () => {
+  it('validatePaymentMethod allows Payment on Delivery and blocks online methods', () => {
     expect(validatePaymentMethod('cod').valid).toBe(true);
-    expect(validatePaymentMethod('mpesa').valid).toBe(true);
+    expect(validatePaymentMethod('mpesa').valid).toBe(false);
     expect(validatePaymentMethod('card').valid).toBe(false);
   });
 
-  it('validateCheckoutPayment requires phone for mpesa', () => {
-    const bad = validateCheckoutPayment({ method: 'mpesa', phone: '', amount: 100 });
-    expect(bad.valid).toBe(false);
-    expect(bad.errors.phone).toBeTruthy();
+  it('validateCheckoutPayment accepts Payment on Delivery without phone', () => {
+    const good = validateCheckoutPayment({ method: 'cod', amount: 100 });
+    expect(good.valid).toBe(true);
 
-    const good = validateCheckoutPayment({
+    const blocked = validateCheckoutPayment({
       method: 'mpesa',
       phone: '0712345678',
       amount: 100,
     });
-    expect(good.valid).toBe(true);
-    expect(good.normalizedPhone).toBe('254712345678');
+    expect(blocked.valid).toBe(false);
+    expect(blocked.errors.method).toBeTruthy();
   });
 });

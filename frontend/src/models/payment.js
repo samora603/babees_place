@@ -3,12 +3,28 @@
  */
 
 export const PAYMENT_METHODS = {
-  cod: { label: 'Cash on Delivery', description: 'Pay when you receive your order' },
-  mpesa: { label: 'M-Pesa', description: 'Pay instantly via STK Push' },
-  card: { label: 'Card', description: 'Coming soon', disabled: true },
-  paypal: { label: 'PayPal', description: 'Coming soon', disabled: true },
-  bank_transfer: { label: 'Bank Transfer', description: 'Coming soon', disabled: true },
+  cod: {
+    label: 'Payment on Delivery',
+    description: 'Pay when you receive your order (delivery or pickup)',
+  },
+  // Preserved for historical orders / DB compatibility — not offered at checkout.
+  mpesa: {
+    label: 'M-Pesa',
+    description: 'Online M-Pesa is not available — Payment on Delivery only',
+    disabled: true,
+  },
+  card: { label: 'Card', description: 'Not available — Payment on Delivery only', disabled: true },
+  paypal: { label: 'PayPal', description: 'Not available — Payment on Delivery only', disabled: true },
+  bank_transfer: {
+    label: 'Bank Transfer',
+    description: 'Not available — Payment on Delivery only',
+    disabled: true,
+  },
 };
+
+/** Sole customer-facing payment method. */
+export const CHECKOUT_PAYMENT_METHOD = 'cod';
+
 
 export const PAYMENT_PROVIDER_STATUSES = {
   pending: { label: 'Pending', color: 'text-yellow-400 bg-yellow-400/10' },
@@ -90,23 +106,12 @@ export function mapPayment(row) {
 }
 
 /**
- * Whether the customer may retry payment for an order.
- * @param {{ paymentStatus?: string, paymentMethod?: string, status?: string }} order
- * @param {object|null} latestPayment
+ * Whether the customer may retry an online payment for an order.
+ * Babees Place is Payment on Delivery only — customer online retries are disabled.
+ * Historical M-Pesa rows remain visible; admins collect payment via fulfillment status.
  */
-export function canRetryPayment(order, latestPayment = null) {
-  if (!order) return false;
-  if (order.status === 'cancelled') return false;
-  if (order.paymentStatus === 'paid') return false;
-  if (order.paymentMethod === 'cod' && !latestPayment) return false;
-  if (latestPayment && ACTIVE_PAYMENT_STATUSES.has(latestPayment.status)) {
-    return false; // wait / poll current attempt
-  }
-  return (
-    order.paymentMethod === 'mpesa' ||
-    latestPayment?.method === 'mpesa' ||
-    ['failed', 'expired', 'cancelled', 'pending'].includes(order.paymentStatus)
-  );
+export function canRetryPayment() {
+  return false;
 }
 
 /**

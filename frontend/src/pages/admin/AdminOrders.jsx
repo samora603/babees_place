@@ -157,7 +157,9 @@ export default function AdminOrders() {
                   <div className="flex flex-col gap-1">
                     <OrderStatusBadge status={o.payment_status || 'pending'} type="payment" />
                     <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                      {(o.payment_method || 'cod').replace('_', ' ')}
+                      {(o.payment_method || 'cod') === 'cod'
+                        ? 'Payment on Delivery'
+                        : (o.payment_method || '').replace('_', ' ')}
                       {o.mpesa_receipt_number ? ` · ${o.mpesa_receipt_number}` : ''}
                     </span>
                   </div>

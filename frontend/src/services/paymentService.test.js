@@ -57,57 +57,17 @@ describe('paymentService', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
-  it('createPaymentForOrder mpesa creates payment and marks initiated', async () => {
-    rpcMock.mockImplementation(async (name) => {
-      if (name === 'create_payment_for_order') {
-        return {
-          data: {
-            id: 'pay-1',
-            order_id: 'o1',
-            user_id: 'u1',
-            provider: 'mock_mpesa',
-            method: 'mpesa',
-            status: 'pending',
-            amount: 500,
-            phone_number: '254712345678',
-          },
-          error: null,
-        };
-      }
-      if (name === 'mark_payment_initiated') {
-        return {
-          data: {
-            id: 'pay-1',
-            order_id: 'o1',
-            user_id: 'u1',
-            provider: 'mock_mpesa',
-            method: 'mpesa',
-            status: 'initiated',
-            amount: 500,
-            checkout_request_id: 'chk_1',
-            merchant_request_id: 'mer_1',
-            phone_number: '254712345678',
-          },
-          error: null,
-        };
-      }
-      return { data: null, error: null };
-    });
-
+  it('createPaymentForOrder rejects mpesa — Payment on Delivery only', async () => {
     const { createPaymentForOrder } = await import('./paymentService');
-    const result = await createPaymentForOrder({
-      orderId: 'o1',
-      method: 'mpesa',
-      phone: '0712345678',
-      amount: 500,
-    });
-
-    expect(result.requiresAction).toBe(true);
-    expect(result.payment.checkoutRequestId).toBe('chk_1');
-    expect(rpcMock).toHaveBeenCalledWith(
-      'create_payment_for_order',
-      expect.objectContaining({ p_order_id: 'o1', p_method: 'mpesa' }),
-    );
+    await expect(
+      createPaymentForOrder({
+        orderId: 'o1',
+        method: 'mpesa',
+        phone: '0712345678',
+        amount: 500,
+      }),
+    ).rejects.toThrow(/not available/i);
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 
   it('handlePaymentCallback finalizes via RPC (idempotent path supported)', async () => {

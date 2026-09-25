@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { orderService } from '@/services/orderService';
 import { paymentService } from '@/services/paymentService';
 import { formatCurrency, formatDateTime } from '@/utils/helpers';
@@ -16,14 +16,12 @@ import { FiArrowLeft } from 'react-icons/fi';
 
 export default function OrderDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [retrying, setRetrying] = useState(false);
 
   const loadOrder = useCallback(() => {
     setLoading(true);
@@ -62,29 +60,6 @@ export default function OrderDetail() {
     }
   };
 
-  const handleRetryPayment = async () => {
-    if (!order) return;
-    setRetrying(true);
-    try {
-      const phone =
-        payment?.phoneNumber ||
-        order.customerPhone ||
-        order.deliveryAddress?.phone ||
-        '';
-      const result = await paymentService.retryPayment({
-        orderId: order.id,
-        phone,
-        amount: order.totalAmount,
-      });
-      toast.success('STK Push sent');
-      navigate(`/orders/${order.id}/pay/${result.payment.id}`);
-    } catch (err) {
-      toast.error(err.message || 'Could not retry payment');
-    } finally {
-      setRetrying(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -116,7 +91,6 @@ export default function OrderDetail() {
   }
 
   const canCancel = orderService.canCancelOrder(order.status, false);
-  const showRetry = paymentService.canRetryPayment(order, payment);
 
   return (
     <div className="section-container py-10 max-w-3xl">
@@ -188,8 +162,6 @@ export default function OrderDetail() {
           <PaymentDetailsCard
             order={order}
             payment={payment}
-            onRetry={showRetry ? handleRetryPayment : undefined}
-            retrying={retrying}
           />
           <p className="text-xs text-slate-500 px-1">Placed: {formatDateTime(order.createdAt)}</p>
         </div>

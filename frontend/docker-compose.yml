@@ -1,0 +1,27 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - frontend_env
+
+    image: babees-place-frontend:latest
+
+    container_name: babees-place-frontend
+
+    ports:
+      - "8080:80"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+secrets:
+  frontend_env:
+    file: .env

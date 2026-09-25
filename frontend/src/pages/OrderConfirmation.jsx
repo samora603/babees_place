@@ -76,8 +76,14 @@ export default function OrderConfirmation() {
         <p className="text-slate-400 mt-2">
           Order <strong className="text-slate-200">{order.orderNumber}</strong> has been placed.
         </p>
+        <p className="text-sm text-slate-400 mt-2">
+          Payment method: <span className="text-brand-400">Payment on Delivery</span>
+          {order.paymentStatus ? (
+            <> · Status: <span className="text-slate-300">{order.paymentStatus}</span></>
+          ) : null}
+        </p>
         {order.mpesaReceiptNumber && (
-          <p className="text-xs text-slate-500 mt-1">M-Pesa receipt: {order.mpesaReceiptNumber}</p>
+          <p className="text-xs text-slate-500 mt-1">Receipt: {order.mpesaReceiptNumber}</p>
         )}
       </div>
 

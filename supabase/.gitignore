@@ -2,6 +2,12 @@
 .branches
 .temp
 
+# Edge Function local secrets (never commit)
+functions/.env
+functions/**/.env
+!.env.example
+!**/.env.example
+
 # dotenvx
 .env.keys
 .env.local

@@ -63,7 +63,7 @@ export default function PaymentDetailsCard({
         )}
         {methodKey === 'cod' && !payment && (
           <p className="text-xs text-slate-500 pt-1">
-            Cash on delivery / pickup — pay when you receive your order.
+            Payment on Delivery — pay when you receive your order (delivery or pickup).
           </p>
         )}
       </div>
@@ -75,7 +75,7 @@ export default function PaymentDetailsCard({
           disabled={retrying}
           className="btn-secondary w-full text-sm mt-2 disabled:opacity-50"
         >
-          {retrying ? 'Starting payment…' : 'Retry M-Pesa Payment'}
+          {retrying ? 'Starting payment…' : 'Retry payment'}
         </button>
       )}
     </div>

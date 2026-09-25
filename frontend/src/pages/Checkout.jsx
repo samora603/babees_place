@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { orderService } from "@/services/orderService";
 import { checkoutService } from "@/services/checkoutService";
 import { addressService } from "@/services/addressService";
-import { paymentService } from "@/services/paymentService";
 import { validateCheckoutPayment } from "@/services/paymentValidation";
 import { formatCurrency } from "@/utils/helpers";
 import { DELIVERY_TYPES } from "@/utils/constants";
@@ -21,9 +20,9 @@ import {
 import CheckoutDeliverySection, { emptyCheckoutAddress } from "@/components/checkout/CheckoutDeliverySection";
 import ExpressCheckoutPanel from "@/components/checkout/ExpressCheckoutPanel";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
-import MpesaPaymentPanel from "@/components/checkout/MpesaPaymentPanel";
 import CheckoutRewardsPanel, { useCheckoutRewardsState } from "@/components/checkout/CheckoutRewardsPanel";
 import { checkoutRewardsService } from "@/services/checkoutRewardsService";
+import { CHECKOUT_PAYMENT_METHOD } from "@/models/payment";
 import toast from "react-hot-toast";
 import { GiBee } from "react-icons/gi";
 import Button from "@/components/ui/Button";
@@ -43,9 +42,6 @@ export default function Checkout() {
   const [newAddressForm, setNewAddressForm] = useState({ ...EMPTY_ADDRESS_FORM });
   const [saveNewAddress, setSaveNewAddress] = useState(true);
   const [checkoutPreferences, setCheckoutPreferences] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [mpesaPhone, setMpesaPhone] = useState("");
-  const [paymentStatusMessage, setPaymentStatusMessage] = useState("");
   const rewards = useCheckoutRewardsState();
   const {
     setPreview: setRewardsPreview,
@@ -86,7 +82,15 @@ export default function Checkout() {
           },
       }));
 
-      if (phone) setMpesaPhone(phone);
+      if (phone) {
+        setForm((f) => ({
+          ...f,
+          deliveryAddress: {
+            ...f.deliveryAddress,
+            phone: f.deliveryAddress.phone || phone,
+          },
+        }));
+      }
 
       if (addresses.length > 0) {
         setAddressMode("saved");
@@ -226,7 +230,6 @@ export default function Checkout() {
     const address = savedAddresses.find((a) => a.id === addressId);
     if (address) {
       setForm((f) => ({ ...f, deliveryAddress: addressToCheckoutDelivery(address) }));
-      if (address.phone) setMpesaPhone(address.phone);
     }
   };
 
@@ -266,12 +269,12 @@ export default function Checkout() {
         return;
       }
 
-      // Express checkout remains COD to preserve the fast path.
+      // Express checkout uses Payment on Delivery only.
       const { order } = await checkoutService.placeExpressOrder(
         user.id,
         expressStatus,
         form.customerNote,
-        "cod",
+        CHECKOUT_PAYMENT_METHOD,
       );
       await reloadCart();
       toast.success("Order placed successfully!");
@@ -313,8 +316,7 @@ export default function Checkout() {
     }
 
     const payValidation = validateCheckoutPayment({
-      method: paymentMethod,
-      phone: mpesaPhone,
+      method: CHECKOUT_PAYMENT_METHOD,
       amount: total,
     });
     if (!payValidation.valid) {
@@ -325,7 +327,6 @@ export default function Checkout() {
 
     setErrors({});
     setSubmitting(true);
-    setPaymentStatusMessage("");
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -363,7 +364,7 @@ export default function Checkout() {
           ? buildDeliveryAddressPayload(deliveryAddress)
           : null,
         customerNote: form.customerNote?.trim() || null,
-        paymentMethod,
+        paymentMethod: CHECKOUT_PAYMENT_METHOD,
         couponCode: rewardPayload.p_coupon_code,
         loyaltyPoints: rewardPayload.p_loyalty_points,
         giftCardCode: rewardPayload.p_gift_card_code,
@@ -377,25 +378,10 @@ export default function Checkout() {
       const { order } = await orderService.placeOrder(user.id, fulfillment);
       await reloadCart();
 
-      // COD path: still award loyalty for paid-on-delivery later; award on place for COD convenience
-      if (paymentMethod === "cod") {
-        import("@/services/loyaltyService")
-          .then(({ loyaltyService }) => loyaltyService.awardPointsForOrder(order.id))
-          .catch(() => {});
-      }
-
-      if (paymentMethod === "mpesa") {
-        setPaymentStatusMessage("Sending M-Pesa STK Push…");
-        const result = await paymentService.createPaymentForOrder({
-          orderId: order.id,
-          method: "mpesa",
-          phone: mpesaPhone,
-          amount: total,
-        });
-        toast.success("Check your phone for the M-Pesa prompt");
-        navigate(`/orders/${order.id}/pay/${result.payment.id}`);
-        return;
-      }
+      // Payment on Delivery: award loyalty at place (collection happens later).
+      import("@/services/loyaltyService")
+        .then(({ loyaltyService }) => loyaltyService.awardPointsForOrder(order.id))
+        .catch(() => {});
 
       toast.success("Order placed successfully!");
       navigate(`/orders/${order.id}/confirmation`);
@@ -404,7 +390,6 @@ export default function Checkout() {
       toast.error(err.message || "Checkout failed");
     } finally {
       setSubmitting(false);
-      setPaymentStatusMessage("");
     }
   };
 
@@ -443,7 +428,7 @@ export default function Checkout() {
         {expressStatus.eligible && !cartBlocked && (
           <div className="mb-8">
             <ExpressCheckoutPanel
-              summary={`${expressStatus.summary} · Cash on Delivery`}
+              summary={`${expressStatus.summary} · Payment on Delivery`}
               totalLabel={formatCurrency(total)}
               onExpressCheckout={handleExpressCheckout}
               disabled={submitting || cartBlocked}
@@ -526,20 +511,9 @@ export default function Checkout() {
 
             <div className="card p-6 space-y-4">
               <PaymentMethodSelector
-                value={paymentMethod}
-                onChange={setPaymentMethod}
-                disabled={submitting}
+                value={CHECKOUT_PAYMENT_METHOD}
                 error={errors.method}
               />
-              {paymentMethod === "mpesa" && (
-                <MpesaPaymentPanel
-                  phone={mpesaPhone}
-                  onPhoneChange={setMpesaPhone}
-                  disabled={submitting}
-                  error={errors.phone}
-                  statusMessage={paymentStatusMessage}
-                />
-              )}
             </div>
 
             <CheckoutRewardsPanel
@@ -619,7 +593,7 @@ export default function Checkout() {
                 <div className="flex justify-between">
                   <span className="text-slate-400">Payment</span>
                   <span className="text-white uppercase tracking-wide text-xs">
-                    {paymentMethod === "mpesa" ? "M-Pesa" : "COD"}
+                    Payment on Delivery
                   </span>
                 </div>
               </div>
@@ -628,7 +602,7 @@ export default function Checkout() {
                 <span className="font-display font-bold text-3xl text-brand-400">{formatCurrency(total)}</span>
               </div>
               <Button onClick={handleCheckout} loading={submitting} disabled={cartBlocked} className="w-full py-4 uppercase tracking-widest">
-                {paymentMethod === "mpesa" ? "Pay with M-Pesa" : "Place Order"}
+                Place Order
               </Button>
               <Link to="/cart" className="block text-center text-sm text-slate-400 hover:text-brand-400 mt-4">
                 Back to cart
