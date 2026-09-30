@@ -188,7 +188,7 @@ export default function Shop() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10">
-          <aside className="lg:w-64 shrink-0 space-y-8 bg-[#111]/80 backdrop-blur-xl p-6 rounded-2xl border border-brand-500/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] h-fit sticky top-28">
+          <aside className="lg:w-64 shrink-0 space-y-8 bg-[#111]/80 backdrop-blur-xl p-6 rounded-2xl border border-brand-500/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] h-fit lg:sticky lg:top-28">
             <div className="flex items-center gap-2 mb-2 pb-4 border-b border-brand-500/10 text-brand-500">
               <FiFilter size={18} />
               <h3 className="font-display font-semibold uppercase tracking-widest text-sm">Refine Search</h3>
